@@ -1,0 +1,8 @@
+Fonts bundled with Paint Battle (UI text). Chinese falls back to system fonts.
+
+Playpen Sans (variable, weights 400-800), latin subset
+  file:     PlaypenSans-latin.woff2  (Google Fonts, v22, latin subset)
+  designer: TypeTogether (Veronika Burian, José Scaglione), a handwriting face made from children's writing
+  source:   https://github.com/TypeTogether/Playpen-Sans  /  https://fonts.google.com/specimen/Playpen+Sans
+  licence:  SIL Open Font License 1.1, full text in OFL.txt (Copyright 2023 The Playpen Sans Project Authors)
+  used for: every UI word and number (index.html --font)

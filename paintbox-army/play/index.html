@@ -1,0 +1,1056 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#c2945f">
+<title>Paintbox Army</title>
+<meta name="description" content="Paint an army and watch it fight.">
+<link rel="preload" href="fonts/PlaypenSans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!-- preload:start (node tools/preload.mjs) -->
+<link rel="modulepreload" href="src/audio/engine.js">
+<link rel="modulepreload" href="src/audio/index.js">
+<link rel="modulepreload" href="src/audio/rules.js">
+<link rel="modulepreload" href="src/audio/synth.js">
+<link rel="modulepreload" href="src/camera.js">
+<link rel="modulepreload" href="src/main.js">
+<link rel="modulepreload" href="src/portal.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-act1.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-act2.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-body.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-gun.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-melee.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-move.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-support.js">
+<link rel="modulepreload" href="src/render/art/fx-mine-throw.js">
+<link rel="modulepreload" href="src/render/art/fx.js">
+<link rel="modulepreload" href="src/render/art/gear-abilities.js">
+<link rel="modulepreload" href="src/render/art/gear-weapons.js">
+<link rel="modulepreload" href="src/render/art/gpu.js">
+<link rel="modulepreload" href="src/render/art/ground.js">
+<link rel="modulepreload" href="src/render/art/index.js">
+<link rel="modulepreload" href="src/render/art/maps-art.js">
+<link rel="modulepreload" href="src/render/art/mine-hooks.js">
+<link rel="modulepreload" href="src/render/art/paint.js">
+<link rel="modulepreload" href="src/render/art/people.js">
+<link rel="modulepreload" href="src/render/art/rig-bosses.js">
+<link rel="modulepreload" href="src/render/art/rig-bugs.js">
+<link rel="modulepreload" href="src/render/art/rig-dinos.js">
+<link rel="modulepreload" href="src/render/art/rig-mine.js">
+<link rel="modulepreload" href="src/render/art/rig-myth.js">
+<link rel="modulepreload" href="src/render/art/rig-ocean.js">
+<link rel="modulepreload" href="src/render/art/rig-pirates.js">
+<link rel="modulepreload" href="src/render/art/rig-quad.js">
+<link rel="modulepreload" href="src/render/art/rig-robots.js">
+<link rel="modulepreload" href="src/render/art/rig-secret.js">
+<link rel="modulepreload" href="src/render/art/rig-siege.js">
+<link rel="modulepreload" href="src/render/art/rig-space.js">
+<link rel="modulepreload" href="src/render/art/rig-sports.js">
+<link rel="modulepreload" href="src/render/art/rig.js">
+<link rel="modulepreload" href="src/render/art/sprites-animals.js">
+<link rel="modulepreload" href="src/render/art/sprites-army.js">
+<link rel="modulepreload" href="src/render/art/sprites-bosses.js">
+<link rel="modulepreload" href="src/render/art/sprites-bugs.js">
+<link rel="modulepreload" href="src/render/art/sprites-dinos.js">
+<link rel="modulepreload" href="src/render/art/sprites-mine.js">
+<link rel="modulepreload" href="src/render/art/sprites-myth.js">
+<link rel="modulepreload" href="src/render/art/sprites-ocean.js">
+<link rel="modulepreload" href="src/render/art/sprites-pirates.js">
+<link rel="modulepreload" href="src/render/art/sprites-robots.js">
+<link rel="modulepreload" href="src/render/art/sprites-secret.js">
+<link rel="modulepreload" href="src/render/art/sprites-siege.js">
+<link rel="modulepreload" href="src/render/art/sprites-space.js">
+<link rel="modulepreload" href="src/render/art/sprites-sports.js">
+<link rel="modulepreload" href="src/render/art/sprites.js">
+<link rel="modulepreload" href="src/render/art/terrain.js">
+<link rel="modulepreload" href="src/render/art/terrain7.js">
+<link rel="modulepreload" href="src/render/art/ui-paint.js">
+<link rel="modulepreload" href="src/render/cam2d.js">
+<link rel="modulepreload" href="src/render/debug.js">
+<link rel="modulepreload" href="src/render/gl2d.js">
+<link rel="modulepreload" href="src/sim/combat/ballistics.js">
+<link rel="modulepreload" href="src/sim/combat/damage.js">
+<link rel="modulepreload" href="src/sim/combat/death.js">
+<link rel="modulepreload" href="src/sim/combat/env.js">
+<link rel="modulepreload" href="src/sim/combat/explode.js">
+<link rel="modulepreload" href="src/sim/combat/fire.js">
+<link rel="modulepreload" href="src/sim/combat/gun.js">
+<link rel="modulepreload" href="src/sim/combat/index.js">
+<link rel="modulepreload" href="src/sim/combat/infect.js">
+<link rel="modulepreload" href="src/sim/combat/melee.js">
+<link rel="modulepreload" href="src/sim/combat/morale.js">
+<link rel="modulepreload" href="src/sim/combat/oil.js">
+<link rel="modulepreload" href="src/sim/combat/plague.js">
+<link rel="modulepreload" href="src/sim/combat/projectiles.js">
+<link rel="modulepreload" href="src/sim/combat/push.js">
+<link rel="modulepreload" href="src/sim/combat/status.js">
+<link rel="modulepreload" href="src/sim/const.js">
+<link rel="modulepreload" href="src/sim/defs.js">
+<link rel="modulepreload" href="src/sim/factions.js">
+<link rel="modulepreload" href="src/sim/game.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/act1-area.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/act1-grab.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/act1-lib.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/act1-rush.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/act1.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/act2.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/move-fly.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/move-ground.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/move-lib.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/move-passive.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/move.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/support-aura.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/support-guard.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/support-lib.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/support-life.js">
+<link rel="modulepreload" href="src/sim/maker/abilities/support.js">
+<link rel="modulepreload" href="src/sim/maker/catalog.js">
+<link rel="modulepreload" href="src/sim/maker/index.js">
+<link rel="modulepreload" href="src/sim/maker/lib.js">
+<link rel="modulepreload" href="src/sim/maker/registry.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/body.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/guns-lib.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/guns-more.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/guns.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/melee-lib.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/melee-tricks.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/melee.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/throw-lib.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/throw-magic.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/throw-sport.js">
+<link rel="modulepreload" href="src/sim/maker/weapons/throw.js">
+<link rel="modulepreload" href="src/sim/maps/beach.js">
+<link rel="modulepreload" href="src/sim/maps/canyon.js">
+<link rel="modulepreload" href="src/sim/maps/castle.js">
+<link rel="modulepreload" href="src/sim/maps/index.js">
+<link rel="modulepreload" href="src/sim/maps/lake.js">
+<link rel="modulepreload" href="src/sim/maps/playground.js">
+<link rel="modulepreload" href="src/sim/maps/swamp.js">
+<link rel="modulepreload" href="src/sim/maps/village.js">
+<link rel="modulepreload" href="src/sim/maps/volcano.js">
+<link rel="modulepreload" href="src/sim/report.js">
+<link rel="modulepreload" href="src/sim/rng.js">
+<link rel="modulepreload" href="src/sim/systems/brain.js">
+<link rel="modulepreload" href="src/sim/systems/conceal.js">
+<link rel="modulepreload" href="src/sim/systems/domino.js">
+<link rel="modulepreload" href="src/sim/systems/extra.js">
+<link rel="modulepreload" href="src/sim/systems/formation.js">
+<link rel="modulepreload" href="src/sim/systems/lifecycle.js">
+<link rel="modulepreload" href="src/sim/systems/march.js">
+<link rel="modulepreload" href="src/sim/systems/navigation.js">
+<link rel="modulepreload" href="src/sim/systems/perception.js">
+<link rel="modulepreload" href="src/sim/systems/possess.js">
+<link rel="modulepreload" href="src/sim/systems/steering.js">
+<link rel="modulepreload" href="src/sim/systems/strategy.js">
+<link rel="modulepreload" href="src/sim/terrain/bridge.js">
+<link rel="modulepreload" href="src/sim/terrain/deps.js">
+<link rel="modulepreload" href="src/sim/terrain/grid.js">
+<link rel="modulepreload" href="src/sim/terrain/hooks.js">
+<link rel="modulepreload" href="src/sim/terrain/ice.js">
+<link rel="modulepreload" href="src/sim/terrain/index.js">
+<link rel="modulepreload" href="src/sim/terrain/lava.js">
+<link rel="modulepreload" href="src/sim/terrain/mines.js">
+<link rel="modulepreload" href="src/sim/terrain/mud.js">
+<link rel="modulepreload" href="src/sim/terrain/peels.js">
+<link rel="modulepreload" href="src/sim/terrain/props.js">
+<link rel="modulepreload" href="src/sim/terrain/tramp.js">
+<link rel="modulepreload" href="src/sim/terrain/wall.js">
+<link rel="modulepreload" href="src/sim/terrain/water.js">
+<link rel="modulepreload" href="src/sim/tick.js">
+<link rel="modulepreload" href="src/sim/units/animals/ant.js">
+<link rel="modulepreload" href="src/sim/units/animals/anthill.js">
+<link rel="modulepreload" href="src/sim/units/animals/ants-system.js">
+<link rel="modulepreload" href="src/sim/units/animals/ape.js">
+<link rel="modulepreload" href="src/sim/units/animals/apecav.js">
+<link rel="modulepreload" href="src/sim/units/animals/boar.js">
+<link rel="modulepreload" href="src/sim/units/animals/cheetah.js">
+<link rel="modulepreload" href="src/sim/units/animals/gator.js">
+<link rel="modulepreload" href="src/sim/units/animals/lib.js">
+<link rel="modulepreload" href="src/sim/units/animals/piranha.js">
+<link rel="modulepreload" href="src/sim/units/animals/rat.js">
+<link rel="modulepreload" href="src/sim/units/animals/snake.js">
+<link rel="modulepreload" href="src/sim/units/animals/soldierant.js">
+<link rel="modulepreload" href="src/sim/units/army/_shared.js">
+<link rel="modulepreload" href="src/sim/units/army/archer.js">
+<link rel="modulepreload" href="src/sim/units/army/cavalry.js">
+<link rel="modulepreload" href="src/sim/units/army/flamer.js">
+<link rel="modulepreload" href="src/sim/units/army/grenadier.js">
+<link rel="modulepreload" href="src/sim/units/army/horse.js">
+<link rel="modulepreload" href="src/sim/units/army/knight.js">
+<link rel="modulepreload" href="src/sim/units/army/legion.js">
+<link rel="modulepreload" href="src/sim/units/army/ninja.js">
+<link rel="modulepreload" href="src/sim/units/army/rifle.js">
+<link rel="modulepreload" href="src/sim/units/army/sniper.js">
+<link rel="modulepreload" href="src/sim/units/bosses/_lib.js">
+<link rel="modulepreload" href="src/sim/units/bosses/gmech.js">
+<link rel="modulepreload" href="src/sim/units/bosses/hydra.js">
+<link rel="modulepreload" href="src/sim/units/bosses/index.js">
+<link rel="modulepreload" href="src/sim/units/bosses/kingslime.js">
+<link rel="modulepreload" href="src/sim/units/bosses/kraken.js">
+<link rel="modulepreload" href="src/sim/units/bosses/lavagolem.js">
+<link rel="modulepreload" href="src/sim/units/bosses/worm.js">
+<link rel="modulepreload" href="src/sim/units/bugs/_lib.js">
+<link rel="modulepreload" href="src/sim/units/bugs/bee.js">
+<link rel="modulepreload" href="src/sim/units/bugs/beehive.js">
+<link rel="modulepreload" href="src/sim/units/bugs/beetle.js">
+<link rel="modulepreload" href="src/sim/units/bugs/bombardier.js">
+<link rel="modulepreload" href="src/sim/units/bugs/index.js">
+<link rel="modulepreload" href="src/sim/units/bugs/mantis.js">
+<link rel="modulepreload" href="src/sim/units/bugs/mosquito.js">
+<link rel="modulepreload" href="src/sim/units/bugs/spider.js">
+<link rel="modulepreload" href="src/sim/units/bugs/stinkbug.js">
+<link rel="modulepreload" href="src/sim/units/dinos/_lib.js">
+<link rel="modulepreload" href="src/sim/units/dinos/ankylo.js">
+<link rel="modulepreload" href="src/sim/units/dinos/index.js">
+<link rel="modulepreload" href="src/sim/units/dinos/longneck.js">
+<link rel="modulepreload" href="src/sim/units/dinos/ptero.js">
+<link rel="modulepreload" href="src/sim/units/dinos/raptor.js">
+<link rel="modulepreload" href="src/sim/units/dinos/spitter.js">
+<link rel="modulepreload" href="src/sim/units/dinos/stego.js">
+<link rel="modulepreload" href="src/sim/units/dinos/trex.js">
+<link rel="modulepreload" href="src/sim/units/dinos/trike.js">
+<link rel="modulepreload" href="src/sim/units/index.js">
+<link rel="modulepreload" href="src/sim/units/mythical/_lib.js">
+<link rel="modulepreload" href="src/sim/units/mythical/dragon.js">
+<link rel="modulepreload" href="src/sim/units/mythical/frog.js">
+<link rel="modulepreload" href="src/sim/units/mythical/giant.js">
+<link rel="modulepreload" href="src/sim/units/mythical/mage.js">
+<link rel="modulepreload" href="src/sim/units/mythical/necro.js">
+<link rel="modulepreload" href="src/sim/units/mythical/risen.js">
+<link rel="modulepreload" href="src/sim/units/mythical/slime.js">
+<link rel="modulepreload" href="src/sim/units/mythical/turn.js">
+<link rel="modulepreload" href="src/sim/units/mythical/zombie.js">
+<link rel="modulepreload" href="src/sim/units/ocean/_lib.js">
+<link rel="modulepreload" href="src/sim/units/ocean/crab.js">
+<link rel="modulepreload" href="src/sim/units/ocean/eel.js">
+<link rel="modulepreload" href="src/sim/units/ocean/index.js">
+<link rel="modulepreload" href="src/sim/units/ocean/octopus.js">
+<link rel="modulepreload" href="src/sim/units/ocean/puffer.js">
+<link rel="modulepreload" href="src/sim/units/ocean/shark.js">
+<link rel="modulepreload" href="src/sim/units/ocean/swordfish.js">
+<link rel="modulepreload" href="src/sim/units/ocean/turtle.js">
+<link rel="modulepreload" href="src/sim/units/ocean/walrus.js">
+<link rel="modulepreload" href="src/sim/units/pirates/_lib.js">
+<link rel="modulepreload" href="src/sim/units/pirates/anchor.js">
+<link rel="modulepreload" href="src/sim/units/pirates/blunderbuss.js">
+<link rel="modulepreload" href="src/sim/units/pirates/bomber.js">
+<link rel="modulepreload" href="src/sim/units/pirates/cannon.js">
+<link rel="modulepreload" href="src/sim/units/pirates/captain.js">
+<link rel="modulepreload" href="src/sim/units/pirates/deckhand.js">
+<link rel="modulepreload" href="src/sim/units/pirates/gunner.js">
+<link rel="modulepreload" href="src/sim/units/pirates/index.js">
+<link rel="modulepreload" href="src/sim/units/pirates/pistol.js">
+<link rel="modulepreload" href="src/sim/units/pirates/ship.js">
+<link rel="modulepreload" href="src/sim/units/props/barrel.js">
+<link rel="modulepreload" href="src/sim/units/props/tree.js">
+<link rel="modulepreload" href="src/sim/units/robots/_lib.js">
+<link rel="modulepreload" href="src/sim/units/robots/bombbot.js">
+<link rel="modulepreload" href="src/sim/units/robots/drone.js">
+<link rel="modulepreload" href="src/sim/units/robots/index.js">
+<link rel="modulepreload" href="src/sim/units/robots/laserbot.js">
+<link rel="modulepreload" href="src/sim/units/robots/magnetbot.js">
+<link rel="modulepreload" href="src/sim/units/robots/mech.js">
+<link rel="modulepreload" href="src/sim/units/robots/repairbot.js">
+<link rel="modulepreload" href="src/sim/units/robots/sawbot.js">
+<link rel="modulepreload" href="src/sim/units/robots/shieldbot.js">
+<link rel="modulepreload" href="src/sim/units/secret/_lib.js">
+<link rel="modulepreload" href="src/sim/units/secret/baby.js">
+<link rel="modulepreload" href="src/sim/units/secret/bogmonster.js">
+<link rel="modulepreload" href="src/sim/units/secret/cowboy.js">
+<link rel="modulepreload" href="src/sim/units/secret/crow.js">
+<link rel="modulepreload" href="src/sim/units/secret/ghost.js">
+<link rel="modulepreload" href="src/sim/units/secret/index.js">
+<link rel="modulepreload" href="src/sim/units/secret/phoenix.js">
+<link rel="modulepreload" href="src/sim/units/secret/scarecrow.js">
+<link rel="modulepreload" href="src/sim/units/secret/seagull.js">
+<link rel="modulepreload" href="src/sim/units/secret/yeti.js">
+<link rel="modulepreload" href="src/sim/units/siege/_lib.js">
+<link rel="modulepreload" href="src/sim/units/siege/ballista.js">
+<link rel="modulepreload" href="src/sim/units/siege/catapult.js">
+<link rel="modulepreload" href="src/sim/units/siege/crossbow.js">
+<link rel="modulepreload" href="src/sim/units/siege/halberd.js">
+<link rel="modulepreload" href="src/sim/units/siege/index.js">
+<link rel="modulepreload" href="src/sim/units/siege/oilpot.js">
+<link rel="modulepreload" href="src/sim/units/siege/ram.js">
+<link rel="modulepreload" href="src/sim/units/siege/shieldwall.js">
+<link rel="modulepreload" href="src/sim/units/siege/siegecrew.js">
+<link rel="modulepreload" href="src/sim/units/siege/siegetower.js">
+<link rel="modulepreload" href="src/sim/units/space/_lib.js">
+<link rel="modulepreload" href="src/sim/units/space/alien.js">
+<link rel="modulepreload" href="src/sim/units/space/astronaut.js">
+<link rel="modulepreload" href="src/sim/units/space/gravity.js">
+<link rel="modulepreload" href="src/sim/units/space/index.js">
+<link rel="modulepreload" href="src/sim/units/space/jetpack.js">
+<link rel="modulepreload" href="src/sim/units/space/mindalien.js">
+<link rel="modulepreload" href="src/sim/units/space/shrinkray.js">
+<link rel="modulepreload" href="src/sim/units/space/teleporter.js">
+<link rel="modulepreload" href="src/sim/units/space/ufo.js">
+<link rel="modulepreload" href="src/sim/units/sports/_lib.js">
+<link rel="modulepreload" href="src/sim/units/sports/batter.js">
+<link rel="modulepreload" href="src/sim/units/sports/bowler.js">
+<link rel="modulepreload" href="src/sim/units/sports/boxer.js">
+<link rel="modulepreload" href="src/sim/units/sports/cheerleader.js">
+<link rel="modulepreload" href="src/sim/units/sports/hockey.js">
+<link rel="modulepreload" href="src/sim/units/sports/index.js">
+<link rel="modulepreload" href="src/sim/units/sports/pitcher.js">
+<link rel="modulepreload" href="src/sim/units/sports/sumo.js">
+<link rel="modulepreload" href="src/sim/units/sports/tackler.js">
+<link rel="modulepreload" href="src/sim/world.js">
+<link rel="modulepreload" href="src/ui/controls.js">
+<link rel="modulepreload" href="src/ui/counts.js">
+<link rel="modulepreload" href="src/ui/fallback-report.js">
+<link rel="modulepreload" href="src/ui/input.js">
+<link rel="modulepreload" href="src/ui/intro.js">
+<link rel="modulepreload" href="src/ui/maker.js">
+<link rel="modulepreload" href="src/ui/maps.js">
+<link rel="modulepreload" href="src/ui/mine.js">
+<link rel="modulepreload" href="src/ui/mock-game.js">
+<link rel="modulepreload" href="src/ui/pilot.js">
+<link rel="modulepreload" href="src/ui/report.js">
+<link rel="modulepreload" href="src/ui/secrets.js">
+<link rel="modulepreload" href="src/ui/strings.js">
+<link rel="modulepreload" href="src/ui/toolbar.js">
+<link rel="modulepreload" href="src/ui/tools.js">
+<!-- preload:end -->
+<style>
+/* Kid-handwriting face for every UI word (fonts/FONTS.txt). Chinese falls back to system fonts. */
+@font-face{font-family:"Playpen Sans";src:url("fonts/PlaypenSans-latin.woff2") format("woff2");font-weight:400 800;font-style:normal;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+/* =====================================================================
+   TOKENS: every colour, size and shape lives here.
+   Look A, POSTER PAINT: a kid's tempera painting lying on a kraft-card table.
+   Painted pictures come from src/render/art/ui-paint.js as --img-* (plain
+   pictures) and --bi-* (9-slice border-images); they are used only under
+   html[data-ui=paint]. The plain rules are the fallback (?debug).
+   Canvas colours (--c-*, --fac-*, --red, --blue) are read by src/render/debug.js.
+   ===================================================================== */
+:root{
+  /* paint palette (src/render/art/paint.js C) */
+  --ink:#1c1916;
+  --paper:#f4ead3;
+  --paper-d:#e2d3b2;
+  --card:#f7efdc;
+  --cloud:#fdfbf4;
+  --kraft:#c2945f;
+  --kraft-d:#9c7346;
+  --yellow:#ffd51e;
+  --on-paint:#fffdf2;          /* words on red, blue and ink paint */
+  /* page + panels */
+  --page-bg:var(--kraft);
+  --shadow:0 3px 0 rgba(70,45,15,.35);
+  --backdrop:rgba(48,32,14,.5);
+  --chart-grid:#e2d3b2;
+  --chart-axis:#9c7346;
+  --chart-cross:#7a5a34;
+  --brush-erase:#e3241a;
+  /* teams: kid red left, kid blue right (OG: red left, blue right, game.js:7145-7147) */
+  --red:#e3241a;
+  --blue:#1f57d8;
+  /* canvas: field + terrain (plain renderer only) */
+  --c-field:#eef0e8;
+  --c-wall:#6b6f78;
+  --c-water:#8dbbe8;
+  --c-deep:#5a93d6;
+  --c-ice:#dcefff;
+  --c-oil:#3a3630;
+  --c-mine:#33363c;
+  --c-mine-armed:#e04a3a;
+  --c-peel:#f2d24b;
+  /* canvas: units */
+  --c-outline:#2a2d33;
+  --c-tick:#1b1d21;
+  --c-hp:#2fbf5b;
+  --c-hp-low:#e0a030;
+  --c-burn:#ff8a2a;
+  --c-tree:#3f8a4a;
+  --c-barrel:#9c6b3c;
+  --c-frog:#6cbf4a;
+  /* canvas: projectiles */
+  --c-bullet:#2a2a2a;
+  --c-flame:#ff8a2a;
+  --c-arrow:#7a5a3a;
+  --c-grenade:#3a3d42;
+  --c-plasma:#9a5cf0;
+  --c-shuriken:#7a7f88;
+  /* canvas: faction colours, index = OG faction id (game.js:8370-8398) */
+  --fac-0:#6b8e23;  --fac-1:#8b5a2b;  --fac-2:#7fa36b;  --fac-3:#e07b2a;  --fac-4:#4f6d5a;
+  --fac-5:#b8433a;  --fac-6:#8a7a3a;  --fac-7:#3f8f6f;  --fac-8:#59c26a;  --fac-9:#9c7b52;
+  --fac-10:#8a8fa0; --fac-11:#b08850; --fac-12:#7b5cc4; --fac-13:#a07860; --fac-14:#8c8c8c;
+  --fac-15:#a0442c; --fac-16:#5a4a42; --fac-17:#4c7a3c; --fac-18:#c95f6a; --fac-19:#c23b3b;
+  --fac-20:#f74444; --fac-21:#4580f7; --fac-22:#999999; --fac-23:#9aa63a; --fac-24:#3b3550;
+  --fac-25:#2b2b3a; --fac-26:#d9a63a;
+
+  /* type */
+  --font:"Playpen Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",system-ui,sans-serif;
+  --font-big:800 22px/1.15 var(--font);
+  --big-pad-x:32px;            /* big buttons' side padding */
+  --result-size:56px;
+  --tab-font:700 11px/1.1 var(--font);
+  --tool-name-font:700 10px/1.1 var(--font);
+  --tool-name-display:none;    /* OG: icons only, names in the hover tooltip */
+  --count-name-display:inline; /* plain look (OG): names in the count chip. Look A hides them (screen-reader text, see .count-name) */
+
+  /* sizes + shapes (painted sizes must match SIZE in src/render/art/ui-paint.js) */
+  --edge:14px;                 /* gap from screen edges (OG 14 px) */
+  --round:38px;                /* round buttons (OG 34 px; painted blobs need the room) */
+  --tab-w:64px;  --tab-h:40px;  /* one painted tab picture; its slot (--tab-slot, set by toolbar.js) is 54-64 px */
+  --tabs-w:268px; --tabs-h:52px; --tabs-pad:6px; --tabs-side:8px; /* strip width is set by toolbar.js for the tab count */
+  --tabs-overlap:6px;          /* the tab strip covers the toolbar's top lip */
+  --card-w:56px; --card-h:51px; --card-gap:2px;
+  --tool-icon-w:46px;
+  --tool-icon-h:37px;
+  --count-icon-w:30px;
+  --count-icon-h:24px;
+  --kraft-tile:300px 200px;
+  --r-panel:6px;
+  --r-chip:12px;
+  --r-card:4px;
+  --r-pill:999px;
+  --bar-h:60px;                /* phone tool bar height: canvas is 60 px shorter on phone (OG game.js:8221) */
+  --top-teams:50px;            /* phone: Team battle button (OG) */
+  --top-controls:92px;         /* phone: control column (OG) */
+  --top-paused:52px;
+  --top-paused-teams:90px;
+  --top-labels:50px;
+
+  /* safe areas (notch, home bar); tests override these */
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  /* field rect, set by main.js */
+  --field-l:0px; --field-t:0px; --field-w:100vw; --field-h:100vh;
+}
+@media (max-width:560px){ :root{ --result-size:34px; } }
+@media (max-height:500px){ :root{ --result-size:40px; } }
+@media (max-width:380px){ :root{ --result-size:29px; --font-big:800 19px/1.15 var(--font); } }
+@media (max-width:340px){ :root{ --result-size:22px; --font-big:800 17px/1.15 var(--font); --big-pad-x:22px; } } /* 22: "BLUE TEAM WINS!" clears the button column */
+
+/* =====================================================================
+   COMPONENTS (use tokens only)
+   ===================================================================== */
+html,body{margin:0;height:100%;overflow:hidden;background:var(--page-bg);overscroll-behavior:none}
+html[data-ui=paint] body{background:var(--page-bg) var(--img-kraft) 0 0/var(--kraft-tile) repeat}
+/* Nothing shows until the first whole frame (field, bar, pictures) is drawn; then it all appears at once (main.js
+   reveal()). Before that the page is plain white like any opening window: no flat-green or half-built screen (user, 11-14). */
+html:not(.ready) #app{visibility:hidden}
+html:not(.ready),html:not(.ready) body{background:#fff!important}
+body{position:fixed;inset:0;font-family:var(--font);color:var(--ink);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+#app,#app *{box-sizing:border-box;touch-action:manipulation}
+[hidden]{display:none!important}
+#load-fail{position:fixed;inset:0;z-index:99;margin:0;padding:16px;display:flex;align-items:center;justify-content:center;text-align:center;background:#fff;color:#222;font:600 18px/1.4 system-ui,sans-serif}
+button{font-family:inherit;color:var(--ink)}
+#safe-probe{position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l)}
+/* words kept for screen readers (and innerText) where the paint shows a picture instead */
+html[data-ui=paint] .tab-label,html[data-ui=paint] .count-n .num,html[data-ui=paint] .count-name{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+#game{position:fixed;display:block;touch-action:none!important;cursor:none}
+/* brush ring: tool colour between two ink hairlines, so it shows on grass, paper, water and ice */
+#brush{position:fixed;left:0;top:0;border:2px solid var(--brush-color,var(--ink));border-radius:50%;background:color-mix(in srgb,var(--brush-color,#000) 10%,transparent);box-shadow:0 0 0 1.5px var(--ink),inset 0 0 0 1.5px var(--ink);opacity:0;pointer-events:none;transition:opacity .12s;z-index:5}
+#brush.visible{opacity:.9}
+#brush.erasing{border-color:var(--brush-erase);border-style:dashed;background:color-mix(in srgb,var(--brush-erase) 8%,transparent)}
+
+/* ---- toolbar: the kid's table (kraft card), tabs = paint blobs, tools = taped paper cards ---- */
+#toolbar{position:fixed;left:50%;bottom:calc(var(--edge) + var(--safe-b));transform:translateX(-50%);width:max-content;max-width:calc(100% - 2*var(--edge) - var(--safe-l) - var(--safe-r));display:flex;flex-direction:column;align-items:flex-start;z-index:10;pointer-events:none}
+#toolbar>*{pointer-events:auto}
+.tool-tabs{position:relative;z-index:1;flex:none;display:flex;width:var(--tabs-w);max-width:100%;height:var(--tabs-h);padding:0;margin:0 0 calc(-1*var(--tabs-overlap)) 10px;background:var(--kraft);border-radius:12px 12px 0 0}
+/* the tabs ride in a strip that scrolls sideways when they don't all fit (phones: 7 tabs now, 13 later); toolbar.js
+   sizes the slots so half a tab peeks out at the edge, and .more-l / .more-r fade the blobs into the kraft there */
+.tab-scroll{position:relative;flex:1;min-width:0;display:flex;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;padding:var(--tabs-pad) var(--tabs-side)}
+.tab-scroll::-webkit-scrollbar{display:none}
+.tab-scroll.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent calc(100% - 2px));mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent calc(100% - 2px))}
+.tab-scroll.more-l{-webkit-mask-image:linear-gradient(90deg,transparent 2px,#000 18px);mask-image:linear-gradient(90deg,transparent 2px,#000 18px)}
+.tab-scroll.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent 2px,#000 18px,#000 calc(100% - 18px),transparent calc(100% - 2px));mask-image:linear-gradient(90deg,transparent 2px,#000 18px,#000 calc(100% - 18px),transparent calc(100% - 2px))}
+/* two rows (toolbar.js .tabs-2): desktop / landscape once the tabs are more than a tab wider than the cards; 13 = 7 + 6 */
+.tabs-2 .tool-tabs{height:calc(var(--tabs-h) + var(--tab-h))}
+.tabs-2 .tab-scroll{flex-wrap:wrap;align-content:flex-start;overflow:hidden}
+/* step 8: two rows that only fit flush with the panel (15 tabs on a 667 px phone on its side; toolbar.js .tabs-tight) */
+.tabs-tight .tool-tabs{margin-left:0}
+.tabs-tight .tab-scroll{padding-left:6px;padding-right:6px}
+.tool-tab{position:relative;flex:none;width:var(--tab-slot,var(--tab-w));height:var(--tab-h);display:grid;place-items:center;padding:0;background:transparent;border:0;border-radius:var(--r-pill);color:var(--ink);cursor:pointer;font:var(--tab-font);transition:transform .1s}
+.tool-tab.open{z-index:1;background:var(--yellow);box-shadow:inset 0 0 0 2px var(--ink)}
+.tool-tab:focus{outline:none}
+.tool-tab:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.tool-panel{position:relative;display:flex;flex-direction:column;max-width:100%;padding:calc(var(--tabs-overlap) + 4px) 8px 8px;background:var(--kraft);border-radius:var(--r-panel);box-shadow:var(--shadow)}
+.tool-row{display:flex;flex-wrap:wrap;gap:var(--card-gap);justify-content:flex-start}
+.tool{flex:none;width:var(--card-w);height:var(--card-h);display:grid;place-items:center;padding:3px 0 0;background:var(--card);border:0;border-radius:var(--r-card);cursor:pointer;transition:transform .1s}
+.tool.active{background:var(--yellow);box-shadow:inset 0 0 0 2.5px var(--ink)}
+.tool:focus{outline:none}
+.tool:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.tool-icon{display:block;width:var(--tool-icon-w);height:var(--tool-icon-h);pointer-events:none}
+.tool.off{cursor:not-allowed}
+.tool.off .tool-icon{filter:grayscale(1) opacity(.35)} /* ?alltabs: unit not registered yet, can't be picked */
+.tool-name{display:var(--tool-name-display);font:var(--tool-name-font);color:var(--ink);white-space:nowrap;max-width:64px;overflow:hidden;text-overflow:ellipsis}
+@media (hover:hover){
+  .tool:hover{transform:translateY(-2px) rotate(-1.5deg)}
+  .tool-tab:hover{transform:translateY(-1px)}
+}
+.tool-tip{position:fixed;z-index:20;background:var(--cloud);border:2px solid var(--ink);border-radius:var(--r-pill);color:var(--ink);font:700 14px/1.2 var(--font);padding:6px 13px 7px;white-space:nowrap;pointer-events:none;transform:translate(-50%,-100%);visibility:hidden}
+.tool-tip.show{visibility:visible}
+.tool-tip kbd{font:800 13px var(--font);margin-left:7px}
+
+/* painted toolbar */
+html[data-ui=paint] .tool-tabs{background:none;border-radius:0;border-image:var(--bi-tabbar)}
+html[data-ui=paint] .tabs-2 .tool-tabs{border-image:var(--bi-tabbar2)}
+html[data-ui=paint] .tool-tabs::before{content:"";position:absolute;left:-22px;top:-20px;width:60px;height:50px;background:var(--img-tape-l) 0 0/100% 100% no-repeat;pointer-events:none}
+/* the painted tab picture keeps its 64 x 40 size centred on a slot that may be narrower (it spills a little into the gap) */
+html[data-ui=paint] .tool-tab,html[data-ui=paint] .tool-tab.open{background:none;box-shadow:none;border-radius:0}
+html[data-ui=paint] .tool-tab::before{content:"";position:absolute;left:50%;top:0;width:var(--tab-w);height:var(--tab-h);margin-left:calc(var(--tab-w)/-2);background:var(--tab-img) center/100% 100% no-repeat;pointer-events:none}
+html[data-ui=paint] .tool-tab.open::before{background-image:var(--tab-img-on)}
+.tool-tab{--tab-img:var(--img-tab-blank);--tab-img-on:var(--img-tab-blank-on)} /* a tab with no picture yet: a plain blob */
+.tool-tab[data-tab=army]{--tab-img:var(--img-tab-army);--tab-img-on:var(--img-tab-army-on)}
+.tool-tab[data-tab=animals]{--tab-img:var(--img-tab-animals);--tab-img-on:var(--img-tab-animals-on)}
+.tool-tab[data-tab=mythical]{--tab-img:var(--img-tab-mythical);--tab-img-on:var(--img-tab-mythical-on)}
+.tool-tab[data-tab=dinos]{--tab-img:var(--img-tab-dinos);--tab-img-on:var(--img-tab-dinos-on)}
+.tool-tab[data-tab=siege]{--tab-img:var(--img-tab-siege);--tab-img-on:var(--img-tab-siege-on)}
+.tool-tab[data-tab=pirates]{--tab-img:var(--img-tab-pirates);--tab-img-on:var(--img-tab-pirates-on)}
+.tool-tab[data-tab=robots]{--tab-img:var(--img-tab-robots);--tab-img-on:var(--img-tab-robots-on)}
+.tool-tab[data-tab=space]{--tab-img:var(--img-tab-space);--tab-img-on:var(--img-tab-space-on)}
+.tool-tab[data-tab=ocean]{--tab-img:var(--img-tab-ocean);--tab-img-on:var(--img-tab-ocean-on)}
+.tool-tab[data-tab=sports]{--tab-img:var(--img-tab-sports);--tab-img-on:var(--img-tab-sports-on)}
+.tool-tab[data-tab=bugs]{--tab-img:var(--img-tab-bugs);--tab-img-on:var(--img-tab-bugs-on)}
+.tool-tab[data-tab=bosses]{--tab-img:var(--img-tab-bosses);--tab-img-on:var(--img-tab-bosses-on)}
+.tool-tab[data-tab=secret]{--tab-img:var(--img-tab-secret);--tab-img-on:var(--img-tab-secret-on)}
+.tool-tab[data-tab=mine]{--tab-img:var(--img-tab-mine);--tab-img-on:var(--img-tab-mine-on)}
+.tool-tab[data-tab=terrain]{--tab-img:var(--img-tab-terrain);--tab-img-on:var(--img-tab-terrain-on)}
+html[data-ui=paint] .tool-panel{background:var(--img-lip) 0 0/240px 6px repeat-x,var(--img-kraft) 0 0/var(--kraft-tile) repeat,var(--kraft);border-radius:3px}
+html[data-ui=paint] .tool-panel::after,html[data-ui=paint] .tabs-wide .tool-tabs::after{content:"";position:absolute;right:-22px;top:-20px;width:60px;height:50px;background:var(--img-tape-r) 0 0/100% 100% no-repeat;pointer-events:none}
+/* the strip as wide as the panel (toolbar.js .tabs-wide): strip + panel are one card, so the right tape holds the strip's top corner */
+html[data-ui=paint] .tabs-wide .tool-tabs::after{z-index:2}
+html[data-ui=paint] .tabs-wide .tool-panel::after{display:none}
+html[data-ui=paint] .tool,html[data-ui=paint] .tool.active{background:var(--card-img,var(--img-card-0)) center/100% 100% no-repeat;box-shadow:none;border-radius:0}
+.tool:nth-child(4n+2){--card-img:var(--img-card-1)}
+.tool:nth-child(4n+3){--card-img:var(--img-card-2)}
+.tool:nth-child(4n+4){--card-img:var(--img-card-3)}
+.tool.active{--card-img:var(--img-card-on-0)}
+.tool.active:nth-child(2n){--card-img:var(--img-card-on-1)}
+html[data-ui=paint] .tool-tip{background:transparent;border:0;border-radius:0;border-image:var(--bi-pill)}
+
+/* ---- round buttons: white painted blobs, painted icons ---- */
+#controls{position:fixed;top:calc(10px + var(--safe-t));right:calc(var(--edge) + var(--safe-r));display:flex;gap:6px;z-index:30}
+.round-button,.report-close{width:var(--round);height:var(--round);display:grid;place-items:center;padding:0;background:var(--cloud);border:2px solid var(--ink);border-radius:50%;color:var(--ink);cursor:pointer;transition:transform .12s}
+.round-button:hover,.report-close:hover{transform:scale(1.06)}
+.round-button:active,.report-close:active{transform:scale(.94)}
+.round-button:focus,.report-close:focus{outline:none}
+.round-button:focus-visible,.report-close:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.round-button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#pause.paused .bars,#pause:not(.paused) .play{display:none}
+#sound[aria-pressed=false] .waves,#sound[aria-pressed=true] .cross{display:none}
+#lang{font:800 12px/1 var(--font)}
+#clear{--ico:var(--img-ico-clear)}
+#pause{--ico:var(--img-ico-pause)}
+#pause.paused{--ico:var(--img-ico-play)}
+#sound{--ico:var(--img-ico-sound)}
+#sound[aria-pressed=false]{--ico:var(--img-ico-mute)}
+#slow{--ico:var(--img-ico-slow);position:relative}
+#follow{--ico:var(--img-ico-follow)}
+#maps-button{--ico:var(--img-ico-maps)}
+#slow .speed{position:absolute;right:-4px;bottom:-4px;font:800 13px/1 var(--font);color:var(--ink);background:var(--cloud);border:2px solid var(--ink);border-radius:9px;padding:1px 4px}
+#slow .speed:empty{display:none}
+html[data-ui=paint] #follow[aria-pressed=true],html[data-ui=paint] #slow.on{background:var(--ico,none) center/22px 22px no-repeat,var(--img-round-on) center/100% 100% no-repeat}
+#follow[aria-pressed=true],#slow.on{background-color:var(--yellow,#ffd51e)}
+body.follow-armed #game{cursor:crosshair}
+.report-close{--ico:var(--img-ico-close)}
+html[data-ui=paint] .round-button,html[data-ui=paint] .report-close{background:var(--ico,none) center/22px 22px no-repeat,var(--img-round) center/100% 100% no-repeat;border:0}
+html[data-ui=paint] .round-button svg,html[data-ui=paint] .report-close svg{display:none}
+
+/* ---- Team battle switch: desktop pill bottom-right, phone round button ---- */
+#teams{position:fixed;right:calc(var(--edge) + var(--safe-r));bottom:calc(var(--edge) + var(--safe-b));display:flex;align-items:center;gap:8px;background:var(--cloud);border:2px solid var(--ink);border-radius:var(--r-pill);color:var(--ink);cursor:pointer;font:700 14px/1.2 var(--font);padding:7px 15px 8px 9px;z-index:30;transition:transform .12s}
+#teams:hover{transform:translateY(-1px)}
+#teams .team-icon{display:none}
+#teams .switch{position:relative;flex:none;width:36px;height:22px;border:2px solid var(--ink);border-radius:11px;background:var(--paper-d)}
+#teams .switch:after{content:"";position:absolute;left:1px;top:1px;width:16px;height:16px;border-radius:50%;background:var(--cloud);border:1.5px solid var(--ink);transition:transform .15s}
+#teams[aria-checked=true] .switch{background:var(--yellow)}
+#teams[aria-checked=true] .switch:after{transform:translateX(14px)}
+#teams:focus{outline:none}
+#teams:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+html[data-ui=paint] #teams{background:transparent;border:0;border-radius:0;border-image:var(--bi-pill)}
+html[data-ui=paint] #teams .switch{background:var(--img-sw-off) center/100% 100% no-repeat;border:0;border-radius:0}
+html[data-ui=paint] #teams[aria-checked=true] .switch{background-image:var(--img-sw-on)}
+html[data-ui=paint] #teams .switch:after{display:none}
+
+/* ---- chips ---- */
+#paused{position:fixed;top:calc(var(--top-paused) + var(--safe-t));left:calc(var(--field-l) + var(--field-w)/2);transform:translateX(-50%);background:var(--ink);color:var(--on-paint);border-radius:var(--r-pill);font:800 13px/1.3 var(--font);letter-spacing:.08em;text-transform:uppercase;padding:6px 17px 7px;pointer-events:none;z-index:15}
+#paused.teams{top:calc(var(--top-paused-teams) + var(--safe-t))}
+html[data-ui=paint] #paused{background:transparent;border-radius:0;border-image:var(--bi-pill-ink)}
+#midline{position:fixed;top:var(--mid-t,var(--field-t));height:var(--mid-h,var(--field-h));left:var(--mid-x,calc(var(--field-l) + var(--field-w)/2));width:0;border-left:3px dashed var(--cloud);transform:translateX(-1.5px);pointer-events:none;z-index:1}
+html[data-ui=paint] #midline{width:10px;border:0;transform:translateX(-5px);background:var(--img-dash) 0 0/10px 34px repeat-y}
+#team-labels{pointer-events:none}
+.team-label{position:fixed;top:calc(var(--top-labels) + var(--safe-t));transform:translateX(-50%);background:var(--team);border:2px solid var(--ink);border-radius:var(--r-pill);color:var(--on-paint);font:800 14px/1.2 var(--font);padding:7px 17px 8px;white-space:nowrap;z-index:2}
+.team-label.left{--team:var(--red);left:var(--lab-l,calc(var(--field-l) + var(--field-w)*.25))}
+.team-label.right{--team:var(--blue);left:var(--lab-r,calc(var(--field-l) + var(--field-w)*.75))}
+html[data-ui=paint] .team-label{background:transparent;border:0;border-radius:0;border-image:var(--bi-pill-red)}
+html[data-ui=paint] .team-label.right{border-image:var(--bi-pill-blue)}
+#counts{position:fixed;left:calc(var(--edge) + var(--safe-l));bottom:calc(var(--edge) + var(--safe-b));display:flex;flex-direction:column;gap:1px;background:var(--cloud);border:2px solid var(--ink);border-radius:var(--r-chip);font:700 13px var(--font);padding:7px 13px 9px 8px;pointer-events:none;z-index:9}
+html[data-ui=paint] #counts{background:transparent;border:0;border-radius:0;border-image:var(--bi-chip)}
+.count{display:flex;align-items:center;gap:5px;height:24px}
+.count-icon{flex:none;width:var(--count-icon-w);height:var(--count-icon-h);margin:0 -2px 0 -3px}
+.count-n{display:flex;align-items:center;font:800 16px/1 var(--font);font-variant-numeric:tabular-nums;min-width:3ch}
+.count-dg{display:none}
+html[data-ui=paint] .count-dg{display:flex}
+.count-dg i{display:block;flex:none;width:14px;height:22px;margin-right:-2.5px;background:var(--dg) center/14px 22px no-repeat}
+.count-dg .d0{--dg:var(--img-d0)} .count-dg .d1{--dg:var(--img-d1)} .count-dg .d2{--dg:var(--img-d2)} .count-dg .d3{--dg:var(--img-d3)} .count-dg .d4{--dg:var(--img-d4)}
+.count-dg .d5{--dg:var(--img-d5)} .count-dg .d6{--dg:var(--img-d6)} .count-dg .d7{--dg:var(--img-d7)} .count-dg .d8{--dg:var(--img-d8)} .count-dg .d9{--dg:var(--img-d9)}
+.count-name{display:var(--count-name-display);margin-left:3px;white-space:nowrap}
+.count-more{position:relative;align-self:flex-start;background:transparent;border:0;color:var(--ink);cursor:pointer;font:800 13px/1.3 var(--font);margin:3px 0 0 2px;padding:2px 4px;pointer-events:auto;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.count-more::after{content:"";position:absolute;inset:-11px -10px -10px -12px}
+#stats{position:fixed;left:calc(var(--edge) + var(--safe-l));top:calc(56px + var(--safe-t));margin:0;background:var(--cloud);border:2px solid var(--ink);border-radius:var(--r-chip);color:var(--ink);font:700 12px/1.5 var(--font);padding:7px 12px 8px;pointer-events:none;z-index:9;white-space:pre}
+html[data-ui=paint] #stats{background:transparent;border:0;border-radius:0;border-image:var(--bi-chip)}
+
+/* ---- big buttons + result ---- */
+.big-button{--shift:translate(0);background:var(--red);color:var(--on-paint);border:2.5px solid var(--ink);border-radius:var(--r-pill);box-shadow:0 4px 0 var(--ink);cursor:pointer;font:var(--font-big);letter-spacing:.04em;padding:9px 28px;text-transform:uppercase;transform:var(--shift);transition:transform .1s;white-space:nowrap}
+.big-button:hover{transform:var(--shift) translateY(-1px) scale(1.04)}
+.big-button:active{transform:var(--shift) translateY(2.5px)}
+.big-button:focus{outline:none}
+.big-button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.big-button.secondary{background:var(--cloud);color:var(--ink)}
+html[data-ui=paint] .big-button{background:transparent;border:0;border-radius:0;box-shadow:none;border-image:var(--bi-big-red);padding:11px var(--big-pad-x) 16px}
+html[data-ui=paint] .big-button.secondary{border-image:var(--bi-big-white)}
+#start{--shift:translateX(-50%);position:fixed;left:calc(var(--field-l) + var(--field-w)/2);bottom:120px;z-index:25}
+#result{position:fixed;top:36%;left:calc(var(--field-l) + var(--field-w)/2);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:16px;pointer-events:none;z-index:26;animation:result-in .35s cubic-bezier(.3,1.6,.6,1)}
+#result .result-buttons{display:flex;gap:12px;pointer-events:auto}
+#result.stack .result-buttons{flex-direction:column;align-items:center;gap:10px} /* no room beside the round buttons (controls.js placeResult) */
+#result-text{--o:calc(var(--result-size)*.075);--drop:calc(var(--o) + 2px) calc(var(--o) + 4px);margin:0;font:800 var(--result-size)/1.1 var(--font);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;color:var(--cloud)}
+#result-text.left{color:var(--red)}
+#result-text.right{color:var(--blue)}
+/* poster lettering: paint colour in an ink outline of width --o (16 text-shadows, works in every WebView), ink drop shadow at --drop */
+#result-text,.report-title,.found-text,.mk-cap-name{text-shadow:var(--o) 0 0 var(--ink),calc(var(--o)*0.92) calc(var(--o)*0.38) 0 var(--ink),calc(var(--o)*0.71) calc(var(--o)*0.71) 0 var(--ink),calc(var(--o)*0.38) calc(var(--o)*0.92) 0 var(--ink),0 var(--o) 0 var(--ink),calc(var(--o)*-0.38) calc(var(--o)*0.92) 0 var(--ink),calc(var(--o)*-0.71) calc(var(--o)*0.71) 0 var(--ink),calc(var(--o)*-0.92) calc(var(--o)*0.38) 0 var(--ink),calc(var(--o)*-1.0) 0 0 var(--ink),calc(var(--o)*-0.92) calc(var(--o)*-0.38) 0 var(--ink),calc(var(--o)*-0.71) calc(var(--o)*-0.71) 0 var(--ink),calc(var(--o)*-0.38) calc(var(--o)*-0.92) 0 var(--ink),0 calc(var(--o)*-1.0) 0 var(--ink),calc(var(--o)*0.38) calc(var(--o)*-0.92) 0 var(--ink),calc(var(--o)*0.71) calc(var(--o)*-0.71) 0 var(--ink),calc(var(--o)*0.92) calc(var(--o)*-0.38) 0 var(--ink),var(--drop) 0 var(--ink)}
+@keyframes result-in{0%{transform:translateX(-50%) scale(.6)}}
+
+/* ---- report: a sheet of cartridge paper taped down ---- */
+.report{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--backdrop);padding:calc(16px + var(--safe-t)) calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l));z-index:50}
+.report-sheet{position:relative;display:flex;flex-direction:column;width:100%;max-width:580px;max-height:100%;background:var(--paper);border-radius:var(--r-card);box-shadow:0 4px 0 rgba(70,45,15,.45),0 14px 40px rgba(0,0,0,.3)}
+html[data-ui=paint] .report-sheet{background:var(--img-paper) 0 0/200px 200px repeat,var(--paper);border-radius:2px}
+html[data-ui=paint] .report-sheet::before,html[data-ui=paint] .report-sheet::after{content:"";position:absolute;top:-22px;width:60px;height:50px;background:0 0/100% 100% no-repeat;pointer-events:none;z-index:1}
+html[data-ui=paint] .report-sheet::before{left:-22px;background-image:var(--img-tape-l)}
+html[data-ui=paint] .report-sheet::after{right:-22px;background-image:var(--img-tape-r)}
+.report-card{min-height:0;overflow-y:auto;color:var(--ink);font-size:14px;padding:20px 22px 22px}
+.report-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.report-title{--o:2.2px;--drop:3px 4px;margin:0 0 4px;font:800 30px/1.1 var(--font);letter-spacing:.03em;text-transform:uppercase;color:var(--cloud)}
+.report-title.left{color:var(--red)}
+.report-title.right{color:var(--blue)}
+.report-sub{color:var(--ink);font:600 15px/1.3 var(--font)}
+.report-close{flex:none}
+.report-close svg{width:18px;height:18px}
+.report-panel{background:var(--card);border:2px solid var(--ink);border-radius:var(--r-chip);padding:12px 14px}
+html[data-ui=paint] .report-panel{background:transparent;border:0;border-radius:0;border-image:var(--bi-panel)}
+html[data-ui=paint] .report-team.won.left{background:transparent;border-image:var(--bi-panel-red)}
+html[data-ui=paint] .report-team.won.right{background:transparent;border-image:var(--bi-panel-blue)}
+/* painted headings: ink words on a yellow swash of paint */
+.report-section-title,.report-highlight-label{display:inline-block;color:var(--ink);font:800 13px/1.25 var(--font);letter-spacing:.03em;text-transform:uppercase;padding:1px 7px;margin-left:-7px;background:var(--yellow);border-radius:3px}
+html[data-ui=paint] .report-section-title,html[data-ui=paint] .report-highlight-label{background:var(--img-swash) center/100% 100% no-repeat;border-radius:0}
+.report-team-name{color:var(--ink);font:800 14px/1.2 var(--font);text-transform:uppercase}
+.report-chart{margin:16px 0 0}
+.report-chart-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;margin-bottom:8px}
+.report-legend{display:flex;flex-wrap:wrap;gap:2px 14px;color:var(--ink);font:700 13px var(--font)}
+.report-key{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.report-key i,.report-tip-row i{display:inline-block;width:16px;height:5px;border-radius:3px}
+.report-plot{position:relative}
+.report-plot svg{display:block;overflow:visible}
+.report-plot .grid{stroke:var(--chart-grid);stroke-width:1.5}
+.report-plot .axis{stroke:var(--chart-axis);stroke-width:2}
+.report-plot .cross{stroke:var(--chart-cross);stroke-width:1.5;stroke-dasharray:4 3}
+.report-plot .line{stroke-width:3}
+.report-plot .tick{font:600 11px var(--font);fill:var(--ink)}
+.report-plot .end-label{font:800 13px var(--font);fill:var(--ink)}
+.report-plot .end-dot{stroke:var(--ink);stroke-width:2}
+.report-tip{position:absolute;min-width:128px;background:var(--cloud);border:2px solid var(--ink);border-radius:10px;font:700 12px/1.35 var(--font);padding:7px 11px 8px;pointer-events:none}
+html[data-ui=paint] .report-tip{background:transparent;border:0;border-radius:0;border-image:var(--bi-chip)}
+.report-tip-time{margin-bottom:2px}
+.report-tip-row{display:flex;align-items:center;gap:6px}
+.report-tip-row b{margin-left:auto;padding-left:10px}
+.report-teams{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.report-team.won{background:var(--team);color:var(--on-paint)}
+.report-team.won .report-team-name,.report-team.won .report-unit-counts,.report-team.won .report-unit-counts b,.report-team.won .report-unit.total .report-unit-name{color:var(--on-paint)}
+.report-team.won .report-unit.total{border-top-color:var(--on-paint)}
+.report-team-head{display:flex;align-items:center;gap:7px;height:22px}
+.report-badge{margin-left:auto;background:var(--yellow);color:var(--ink);border:1.5px solid var(--ink);border-radius:var(--r-pill);font:800 11px/1.2 var(--font);letter-spacing:.06em;padding:3px 10px;text-transform:uppercase}
+html[data-ui=paint] .report-badge{background:transparent;border:0;border-radius:0;border-image:var(--bi-pill-yellow)}
+.report-units{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.report-unit{display:flex;align-items:center;gap:8px;font-weight:600}
+.report-icon{flex:none;width:30px;height:24px;margin:-3px -4px}
+.report-unit-counts{margin-left:auto;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.report-unit-counts i{font-style:normal;margin:0 5px}
+.report-unit-counts b{display:inline-block;min-width:2ch;text-align:right;font-weight:800;color:var(--ink)}
+.report-unit.total{border-top:2px solid var(--ink);margin-top:4px;padding-top:6px}
+.report-unit.total .report-unit-name{color:var(--ink);font-weight:800}
+.report-highlights{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px;margin-top:10px}
+.report-highlight{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.highlight-icon{flex:none;width:44px;height:35px;margin:-4px 0 -2px -6px}
+.report-highlight-text{font:600 14px/1.35 var(--font);margin-top:4px}
+@media (max-width:480px){
+  .report-card{padding:16px 15px 16px}
+  .report-title{font-size:25px}
+  .report-highlights{grid-auto-flow:row;gap:8px;margin-top:8px}
+  .report-highlight{flex-direction:row;gap:8px}
+  .highlight-icon{margin:-2px -4px 0 -6px}
+  /* teams side by side (OG stacks them here): a row is icon + "from -> to", the name stays as screen-reader text like
+     the count chip's, so the report fits a phone without scrolling (user rule) */
+  .report-teams{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
+  .report-team .report-unit-name{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .report-team-head{flex-wrap:wrap;height:auto;min-height:22px;row-gap:3px}
+  .report-unit{gap:6px}
+  .report-unit-counts i{margin:0 3px}
+  .report-panel{padding:10px 13px}
+  .report-team.report-panel{padding:9px 9px}
+}
+
+/* Narrow phones (320-340 px): OG's chart is never narrower than 260 px (game.js:7918), so the paper and panels give up
+   their side padding to keep it inside its panel. */
+@media (max-width:340px){
+  .report{padding-left:calc(8px + var(--safe-l));padding-right:calc(8px + var(--safe-r))}
+  .report-card{padding:14px 9px 12px}
+  .report-panel{padding:9px 7px}
+  .team-label{font-size:12px;padding:6px 12px 7px}
+}
+/* Short landscape screens (a phone on its side): the report goes side by side, chart left, teams + highlights right,
+   so it fits without scrolling. */
+@media (max-height:500px) and (min-width:600px){
+  .report{padding-top:calc(10px + var(--safe-t));padding-bottom:calc(10px + var(--safe-b))}
+  .report-sheet{max-width:920px}
+  .report-card{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);grid-template-areas:"head head head" "chart teams hl";grid-template-rows:auto 1fr;column-gap:10px;align-content:start;padding:12px 16px 14px}
+  .report-head{grid-area:head;margin-bottom:6px}
+  .report-title{font-size:24px}
+  .report-chart{grid-area:chart;margin:0;align-self:start}
+  .report-teams{grid-area:teams;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:0;gap:6px;align-self:start}
+  .report-team .report-unit-name{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .report-team-head{flex-wrap:wrap;height:auto;min-height:22px;row-gap:3px}
+  .report-team.report-panel{padding:8px 8px}
+  .report-unit{gap:5px}
+  .report-unit-counts i{margin:0 3px}
+  .report-highlights{grid-area:hl;grid-auto-flow:row;gap:6px;margin:0;align-self:start}
+  .report-highlight{flex-direction:row;gap:8px}
+  .report-panel{padding:9px 12px}
+}
+
+/* ---- possess (Part 2 step 3, OURS): hold ring, the driven unit's hp, X, two thumb sticks ---- */
+#grab{position:fixed;left:0;top:0;transform:var(--grab-at);border:3px solid var(--yellow);border-radius:50%;box-shadow:0 0 0 1.5px var(--ink),inset 0 0 0 1.5px var(--ink);opacity:0;pointer-events:none;z-index:6}
+#grab.on{animation:grab-close .5s linear forwards}
+@keyframes grab-close{0%{opacity:.95;transform:var(--grab-at) scale(2.4)}100%{opacity:1;transform:var(--grab-at) scale(1)}}
+body.piloting #toolbar,body.piloting #counts,body.piloting #brush,body.piloting #follow,body.piloting #teams{display:none!important}
+body.piloting #game{cursor:crosshair}
+#pilot-x{position:fixed;top:calc(10px + var(--safe-t));left:calc(var(--edge) + var(--safe-l));z-index:30;--ico:var(--img-ico-close)}
+#pilot-hp{--hp-own:#3fae4a;position:fixed;top:calc(10px + var(--safe-t));left:calc(var(--field-l) + var(--field-w)/2);transform:translateX(-50%);display:flex;align-items:center;gap:6px;height:var(--round);width:min(46vw,280px);padding:0 12px 0 4px;background:var(--cloud);border:2.5px solid var(--ink);border-radius:var(--r-pill);pointer-events:none;z-index:20}
+html[data-ui=paint] #pilot-hp{background:transparent;border:0;border-radius:0;border-image:var(--bi-pill)}
+#pilot-hp .pilot-icon{flex:none;width:40px;height:32px;display:grid;place-items:center}
+#pilot-hp .pilot-icon canvas{width:40px;height:32px}
+#pilot-hp .pilot-bar{position:relative;flex:1;height:14px;border:2px solid var(--ink);border-radius:var(--r-pill);background:var(--paper-d);overflow:hidden}
+#pilot-hp .pilot-bar i{position:absolute;inset:0;background:var(--hp-team);transform-origin:0 50%;transition:transform .12s}
+#pilot-hp.low .pilot-bar i{animation:hp-low .5s ease-in-out infinite alternate}
+@keyframes hp-low{to{filter:brightness(1.35)}}
+#pilot-me{position:fixed;left:calc(var(--field-l) - 9px);top:calc(var(--field-t) - 16px);width:18px;height:14px;pointer-events:none;z-index:4}
+#pilot-me::before{content:"";position:absolute;inset:0;background:var(--ink);clip-path:polygon(0 0,100% 0,50% 100%)}
+#pilot-me::after{content:"";position:absolute;left:3.5px;top:2px;width:11px;height:8px;background:var(--yellow);clip-path:polygon(0 0,100% 0,50% 100%)}
+.stick{--r:46px;position:fixed;left:calc(var(--field-l) - var(--r));top:calc(var(--field-t) - var(--r));width:calc(2*var(--r));height:calc(2*var(--r));border:3px solid var(--ink);border-radius:50%;background:color-mix(in srgb,var(--cloud) 30%,transparent);pointer-events:none;z-index:20}
+.stick i{position:absolute;left:50%;top:50%;margin:-22px 0 0 -22px;width:44px;height:44px;border:3px solid var(--ink);border-radius:50%;background:var(--cloud);box-shadow:0 3px 0 rgba(28,25,22,.35)}
+.stick.aim i{background:var(--red)}
+
+/* ---- maps (Part 2 step 7, OURS): the maps panel (a kraft board with taped paper cards), the Found card, locked Secret
+   cards. ui/maps.js sizes the grid (--map-cols, --map-cw, --map-tw, --map-th, --map-font, --map-badge) for the screen,
+   so the panel fits a phone either way up and desktop without scrolling. ---- */
+.maps{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--backdrop);padding:calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));z-index:45}
+.maps-sheet{position:relative;padding:60px 14px 14px;background:var(--kraft);border-radius:var(--r-panel);box-shadow:0 4px 0 rgba(70,45,15,.45),0 14px 40px rgba(0,0,0,.3)}
+.maps-sheet.x-right{padding:14px 60px 14px 14px}
+html[data-ui=paint] .maps-sheet{background:var(--img-lip) 0 0/240px 6px repeat-x,var(--img-kraft) 0 0/var(--kraft-tile) repeat,var(--kraft);border-radius:3px}
+html[data-ui=paint] .maps-sheet::before,html[data-ui=paint] .maps-sheet::after{content:"";position:absolute;top:-20px;width:60px;height:50px;background:0 0/100% 100% no-repeat;pointer-events:none;z-index:3}
+html[data-ui=paint] .maps-sheet::before{left:-22px;background-image:var(--img-tape-l)}
+html[data-ui=paint] .maps-sheet::after{right:-22px;background-image:var(--img-tape-r)}
+.maps-close{--ico:var(--img-ico-close);position:absolute;top:12px;right:12px;z-index:4}
+.maps-sheet.x-right .maps-close{top:16px;right:12px}
+.maps-grid{display:grid;grid-template-columns:repeat(var(--map-cols,3),var(--map-cw,120px));gap:10px}
+.map-card{--tilt:0deg;position:relative;display:flex;flex-direction:column;align-items:center;width:var(--map-cw,120px);padding:8px 8px 0;background:var(--card);border:2px solid var(--kraft-d);border-radius:var(--r-card);color:var(--ink);cursor:pointer;transform:rotate(var(--tilt));transition:transform .1s}
+.map-card:nth-child(3n+1){--tilt:-.7deg}
+.map-card:nth-child(3n+3){--tilt:.6deg}
+.map-card:focus{outline:none}
+.map-card:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+@media (hover:hover){ .map-card:hover{transform:translateY(-3px) rotate(calc(var(--tilt) - 1deg))} }
+.map-card:active{transform:translateY(1px) rotate(var(--tilt)) scale(.98)}
+.map-card.on{background:var(--yellow);border:3px solid var(--ink)}
+html[data-ui=paint] .map-card,html[data-ui=paint] .map-card.on{background:transparent;border:0;border-radius:0;border-image:var(--bi-mapcard)}
+html[data-ui=paint] .map-card.on{border-image:var(--bi-mapcard-on)}
+html[data-ui=paint] .map-card::before{content:"";position:absolute;left:50%;top:-8px;width:40px;height:16px;margin-left:-20px;background:var(--img-tape-s) 0 0/100% 100% no-repeat;pointer-events:none;z-index:2}
+.map-thumb{display:block;flex:none;width:var(--map-tw,104px);height:var(--map-th,104px);background:var(--paper-d);box-shadow:0 0 0 2px var(--ink);border-radius:2px;overflow:hidden}
+.map-thumb canvas{display:block;width:100%;height:100%}
+.map-name{display:block;height:28px;margin-bottom:6px;font:800 var(--map-font,15px)/28px var(--font);color:var(--ink);white-space:nowrap}
+.map-badge{position:absolute;top:-7px;right:-7px;z-index:3;width:var(--map-badge,34px);height:var(--map-badge,34px);display:grid;place-items:center;padding:0 0 2px;background:var(--cloud);border:2px solid var(--ink);border-radius:50%;color:var(--ink);font:800 calc(var(--map-badge,34px)*.58)/1 var(--font)}
+.map-badge.q{background:var(--yellow)}
+html[data-ui=paint] .map-badge{background:var(--img-round) center/100% 100% no-repeat;border:0;border-radius:0}
+html[data-ui=paint] .map-badge.q{background-image:var(--img-round-on)}
+.map-badge-icon{display:block;width:84%;height:auto;pointer-events:none}
+/* "look here": a locked Secret card was tapped, its map's card wiggles in a red ring */
+.map-card.hint{animation:map-hint .7s ease-in-out 0s 4}
+.map-card.hint::after{content:"";position:absolute;inset:-9px;border:3px solid var(--red);border-radius:10px;pointer-events:none;z-index:1}
+html[data-ui=paint] .map-card.hint::after{border:0;border-radius:0;border-image:var(--bi-ring-red)}
+@keyframes map-hint{0%,100%{transform:rotate(var(--tilt))}25%{transform:rotate(-3deg) scale(1.04)}75%{transform:rotate(3deg) scale(1.04)}}
+
+/* the Found card: the unit big, poster lettering, confetti; a tap anywhere (or 3 s) closes it */
+.found{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(16px + var(--safe-t)) calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l));z-index:48;cursor:pointer;overflow:hidden}
+.found-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;max-width:min(92vw,560px);padding:16px 24px 20px;background:var(--paper);border-radius:var(--r-card);box-shadow:0 4px 0 rgba(70,45,15,.45),0 14px 40px rgba(0,0,0,.35);animation:found-in .55s cubic-bezier(.3,1.6,.6,1) both,found-wob 1.8s ease-in-out .55s infinite}
+html[data-ui=paint] .found-card{background:var(--img-paper) 0 0/200px 200px repeat,var(--paper);border-radius:2px}
+html[data-ui=paint] .found-card::before,html[data-ui=paint] .found-card::after{content:"";position:absolute;top:-22px;width:60px;height:50px;background:0 0/100% 100% no-repeat;pointer-events:none;z-index:1}
+html[data-ui=paint] .found-card::before{left:-22px;background-image:var(--img-tape-l)}
+html[data-ui=paint] .found-card::after{right:-22px;background-image:var(--img-tape-r)}
+.found-icon{display:block}
+.found-icon canvas{display:block;width:min(240px,62vw,40vh)!important;height:auto!important}
+.found-text{--o:calc(var(--found-size)*.075);--drop:calc(var(--o) + 2px) calc(var(--o) + 3px);--found-size:clamp(22px,min(8vw,8.5vh),44px);margin:0;padding:0 4px;font:800 var(--found-size)/1.12 var(--font);letter-spacing:.03em;text-transform:uppercase;text-align:center;text-wrap:balance;color:var(--yellow)}
+@keyframes found-in{0%{transform:scale(.3) rotate(-14deg)}60%{transform:scale(1.08) rotate(4deg)}100%{transform:scale(1) rotate(-1.5deg)}}
+@keyframes found-wob{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg) scale(1.02)}}
+.confetti{position:absolute;left:50%;top:46%;width:0;height:0;pointer-events:none}
+.confetti i{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2.5px var(--ink);animation:confetti var(--d) cubic-bezier(.15,.75,.35,1) both}
+.confetti i.strip{width:9px;height:22px;border-radius:3px}
+@keyframes confetti{0%{transform:translate(0,0) rotate(0) scale(.3)}55%{transform:translate(var(--dx),calc(var(--dy) - 70px)) rotate(calc(var(--rot)*.6)) scale(1)}100%{transform:translate(calc(var(--dx)*1.12),calc(var(--dy) + 50px)) rotate(var(--rot)) scale(1)}}
+
+/* Secret tab: a unit not found yet = a locked card: its dark silhouette, a padlock, the name of the map it hides on */
+.tool.secret{position:relative}
+.tool-hide,.tool-lock,.tool-where{display:none}
+.tool.locked .tool-icon,.tool.locked .tool-hide{transform:translateY(-5px) scale(.86)}
+.tool.locked .tool-icon{filter:brightness(0) invert(.14)}
+.tool.locked.has-hide .tool-icon{display:none}
+.tool.locked.has-hide .tool-hide{display:block;width:var(--tool-icon-w);height:var(--tool-icon-h);pointer-events:none}
+.tool.locked .tool-lock{display:block;position:absolute;right:3px;top:5px;width:17px;height:19px;background:var(--yellow);border:1.5px solid var(--ink);border-radius:3px;pointer-events:none}
+html[data-ui=paint] .tool.locked .tool-lock{background:var(--img-lock) center/100% 100% no-repeat;border:0;border-radius:0}
+.tool.locked .tool-where{display:block;position:absolute;left:3px;right:3px;bottom:4px;padding:1px 1px 2px;background:var(--cloud);border:1.5px solid var(--ink);border-radius:3px;color:var(--ink);font:800 9.5px/1.05 var(--font);text-align:center;white-space:nowrap;overflow:hidden;pointer-events:none}
+
+/* ---- Mine tab (Part 2 step 8, OURS): made cards (the player's name on a chip when there is one), the + card, the
+   edit button after the picked made card ---- */
+.tool.made{position:relative}
+.tool-tag{display:block;position:absolute;left:3px;right:3px;bottom:4px;padding:1px 1px 2px;background:var(--cloud);border:1.5px solid var(--ink);border-radius:3px;color:var(--ink);font:800 9.5px/1.05 var(--font);text-align:center;white-space:nowrap;overflow:hidden;pointer-events:none}
+.tool-tag[hidden]{display:none}
+.tool-tag.two{white-space:normal;line-height:1;max-height:22px;word-break:break-word;overflow-wrap:anywhere}
+.tool.made.tagged .tool-icon{transform:translateY(-5px) scale(.86)}
+.tool.made.tagged:has(.tool-tag.two) .tool-icon{transform:translateY(-11px) scale(.7)}
+.tool-add{display:grid;place-items:center}
+.tool-add::before{content:"+";font:800 28px/1 var(--font);color:var(--ink)}
+html[data-ui=paint] .tool.tool-add{background:var(--img-card-add) center/100% 100% no-repeat}
+html[data-ui=paint] .tool-add::before{content:none}
+.tool-edit{flex:none;width:34px;height:var(--card-h);padding:0;margin-left:-1px;background:var(--yellow);border:2px solid var(--ink);border-radius:var(--r-card);cursor:pointer;transition:transform .1s}
+.tool-edit::before{content:"";display:block;width:22px;height:22px;margin:auto;background:var(--img-ico-edit) center/100% 100% no-repeat}
+html[data-ui=paint] .tool-edit{background:var(--img-card-edit) center/100% 100% no-repeat;border:0;border-radius:0}
+html[data-ui=paint] .tool-edit::before{content:none}
+.tool-edit:focus{outline:none}
+.tool-edit:focus-visible,.tool-add:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+@media (hover:hover){ .tool-edit:hover{transform:translateY(-2px) rotate(1.5deg)} }
+
+/* ---- the unit maker (Part 2 step 8, OURS): a kraft board in one of two fixed designs (portrait 304 x 552, landscape
+   560 x 320), scaled as a whole by ui/maker.js to fit the screen: nothing in it can scroll ---- */
+.maker{position:fixed;inset:0;background:var(--backdrop);z-index:47;overflow:hidden}
+.maker-sheet{position:absolute;left:0;top:0;transform-origin:0 0;box-sizing:border-box;display:grid;padding:10px;background:var(--kraft);border-radius:var(--r-panel);box-shadow:0 4px 0 rgba(70,45,15,.45),0 14px 40px rgba(0,0,0,.3)}
+html[data-ui=paint] .maker-sheet{background:var(--img-lip) 0 0/240px 6px repeat-x,var(--img-kraft) 0 0/var(--kraft-tile) repeat,var(--kraft);border-radius:3px}
+html[data-ui=paint] .maker-sheet::before,html[data-ui=paint] .maker-sheet::after{content:"";position:absolute;top:-20px;width:60px;height:50px;background:0 0/100% 100% no-repeat;pointer-events:none;z-index:3}
+html[data-ui=paint] .maker-sheet::before{left:-22px;background-image:var(--img-tape-l)}
+html[data-ui=paint] .maker-sheet::after{right:-22px;background-image:var(--img-tape-r)}
+.maker-sheet.port{grid-template-columns:284px;grid-template-rows:125px 34px 48px 32px 32px 32px 48px 48px 48px 40px;row-gap:5px;
+  grid-template-areas:"stage" "name" "body" "size" "hp" "speed" "weapon" "abil" "look" "btns"}
+.maker-sheet.land{grid-template-columns:200px 328px;column-gap:12px;grid-template-rows:46px 30px 30px 30px 46px 46px 48px;row-gap:4px;
+  grid-template-areas:"stage body" "stage size" "stage hp" "stage speed" "name weapon" "btns abil" "btns look"}
+.maker-sheet.port.picking{grid-template-columns:100px 176px;column-gap:8px;grid-template-rows:70px 457px;grid-template-areas:"stage cap" "grid grid"}
+.maker-sheet.land.picking{grid-template-columns:96px 432px;grid-template-rows:60px 236px;grid-template-areas:"stage cap" "grid grid"}
+.maker-sheet>*{min-width:0;min-height:0}
+.maker-sheet:focus{outline:none}
+.maker-sheet:not(.picking) .mk-cap,.maker-sheet:not(.picking) .mk-grid{display:none}
+.maker-sheet.picking>.mk-name,.maker-sheet.picking>.mk-body,.maker-sheet.picking>.mk-track,.maker-sheet.picking>.mk-weapon,.maker-sheet.picking>.mk-abil,.maker-sheet.picking>.mk-look,.maker-sheet.picking>.mk-buttons{display:none}
+.mk-close{--ico:var(--img-ico-close);position:absolute;top:6px;right:6px;z-index:4}
+/* stage: the live preview on a strip of sky and grass, taped down */
+.mk-stage{grid-area:stage;position:relative;background:var(--c-field);border-radius:4px;box-shadow:0 0 0 2.5px var(--ink),2px 4px 0 2px rgba(70,45,15,.3)}
+html[data-ui=paint] .mk-stage{background:var(--img-stage) center/cover no-repeat}
+html[data-ui=paint] .mk-stage::before{content:"";position:absolute;left:50%;top:-8px;width:44px;height:17px;margin-left:-22px;background:var(--img-tape-s) 0 0/100% 100% no-repeat;pointer-events:none;z-index:2}
+.mk-stage-cv{display:block;width:100%;height:100%}
+/* name: tap to type; empty shows its weapon's name in ink (no see-through placeholder) */
+.mk-name{grid-area:name;position:relative;display:flex;align-items:center;background:var(--card);border:2px solid var(--ink);border-radius:var(--r-chip);cursor:text}
+html[data-ui=paint] .mk-name{background:transparent;border:0;border-radius:0;border-image:var(--bi-panel)}
+.mk-name-in{flex:1;min-width:0;height:100%;padding:0 34px 0 12px;background:transparent;border:0;outline:0;color:var(--ink);font:800 18px/1 var(--font);-webkit-user-select:text;user-select:text}
+.mk-name-in::placeholder{color:var(--ink);opacity:1}
+.mk-pencil{position:absolute;right:8px;top:50%;width:22px;height:22px;margin-top:-11px;background:var(--img-ico-edit) center/100% 100% no-repeat;pointer-events:none}
+.mk-name:focus-within{box-shadow:0 0 0 3px var(--yellow)}
+/* painted cells: chips, body buttons, picker cards; colour = weapon group / ability kind; picked = yellow */
+.mk-cell{position:relative;display:flex;align-items:center;justify-content:center;padding:0;background:var(--card);border:2px solid var(--ink);border-radius:8px;color:var(--ink);cursor:pointer;transition:transform .08s}
+.mk-cell.on{background:var(--yellow);border-width:3px}
+html[data-ui=paint] .mk-cell{background:transparent;border:0;border-radius:0;border-image:var(--bi-cell-plain)}
+html[data-ui=paint] .mk-cell[data-group=gun]{border-image:var(--bi-cell-gun)}
+html[data-ui=paint] .mk-cell[data-group=throw]{border-image:var(--bi-cell-throw)}
+html[data-ui=paint] .mk-cell[data-group=magic]{border-image:var(--bi-cell-magic)}
+html[data-ui=paint] .mk-cell[data-group=melee]{border-image:var(--bi-cell-melee)}
+html[data-ui=paint] .mk-cell[data-group=body]{border-image:var(--bi-cell-body)}
+html[data-ui=paint] .mk-cell[data-group=move]{border-image:var(--bi-cell-move)}
+html[data-ui=paint] .mk-cell[data-group=act]{border-image:var(--bi-cell-act)}
+html[data-ui=paint] .mk-cell[data-group=support]{border-image:var(--bi-cell-support)}
+html[data-ui=paint] .mk-cell[data-group=passive]{border-image:var(--bi-cell-passive)}
+html[data-ui=paint] .mk-cell[data-group=death]{border-image:var(--bi-cell-death)}
+html[data-ui=paint] .mk-cell.on{border-image:var(--bi-cell-on)}
+.mk-cell:focus{outline:none}
+.mk-cell:focus-visible,.mk-swatch:focus-visible,.mk-track:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.mk-cell:active{transform:translateY(1px) scale(.97)}
+@media (hover:hover){ .mk-cell:hover{transform:translateY(-2px) rotate(-1deg)} }
+.mk-body{grid-area:body;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.maker-sheet.land .mk-body{padding-right:46px}
+.mk-bodybtn canvas{display:block;width:60px;height:42px;pointer-events:none}
+.maker-sheet.land .mk-bodybtn canvas{width:60px;height:40px}
+.mk-body.plain .mk-bodybtn canvas{display:none}
+.mk-body.plain .mk-bodybtn::before{content:"";width:56px;height:42px;background:var(--bimg) center/contain no-repeat;pointer-events:none}
+.mk-bodyword{display:none;font:800 14px/1 var(--font)}
+html:not([data-ui=paint]) .mk-body.plain .mk-bodyword{display:block}
+html:not([data-ui=paint]) .mk-body.plain .mk-bodybtn::before{content:none}
+html:not([data-ui=paint]) .mk-tico.speed::before{content:"\00BB";font:800 26px/22px var(--font);color:var(--ink)}
+.mk-bodybtn[data-body=person]{--bimg:var(--img-body-person)} .mk-bodybtn[data-body=animal]{--bimg:var(--img-body-animal)}
+.mk-bodybtn[data-body=beast]{--bimg:var(--img-body-beast)} .mk-bodybtn[data-body=giant]{--bimg:var(--img-body-giant)}
+/* tracks: size = 5 dots growing, health / speed = steps filled up to the pick + the number */
+.mk-track{display:flex;align-items:center;gap:6px;padding:0 2px;cursor:pointer}
+#app .mk-track,#app .mk-track *{touch-action:none} /* a drag along a track sets it (no pan); #app * is manipulation */
+.mk-size{grid-area:size}.mk-hp{grid-area:hp}.mk-speed{grid-area:speed}
+.mk-tico{flex:none;width:26px;height:26px;background:center/100% 100% no-repeat}
+.mk-tico.heart{background-image:var(--img-ico-heart)} .mk-tico.speed{background-image:var(--img-ico-speed)}
+html:not([data-ui=paint]) .mk-tico.heart::before{content:"\2665";font:800 20px/26px var(--font);color:var(--red)}
+.mk-steps{flex:1;display:flex;align-items:center;gap:3px;height:100%}
+.mk-seg{flex:1;height:24px;background:var(--paper);border:1.5px solid var(--ink);border-radius:5px;pointer-events:none}
+.mk-seg.on{background:var(--red)}
+html[data-ui=paint] .mk-seg{background:var(--img-seg) center/100% 100% no-repeat;border:0;border-radius:0}
+html[data-ui=paint] .mk-seg.on{background:var(--img-seg-on) center/100% 100% no-repeat}
+.mk-size .mk-steps{gap:0}
+.mk-size .mk-seg{flex:none;margin:0 auto;width:calc(12px + var(--i)*4.5px);height:calc(12px + var(--i)*4.5px);border-radius:50%}
+.mk-size .mk-seg.on{background:var(--yellow);border-width:2.5px}
+html[data-ui=paint] .mk-size .mk-seg{background:var(--img-dot) center/100% 100% no-repeat;border:0;border-radius:0}
+html[data-ui=paint] .mk-size .mk-seg.on{background:var(--img-dot-on) center/100% 100% no-repeat}
+.mk-val{flex:none;width:48px;text-align:right;font:800 17px/1.35 var(--font);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* weapon + ability chips: icon + name */
+.mk-chip{gap:6px;justify-content:flex-start;padding:2px 10px 2px 6px}
+.mk-weapon{grid-area:weapon}
+.mk-abil{grid-area:abil;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mk-abil .mk-chip[hidden]{display:flex;visibility:hidden}
+.mk-chip-ico{flex:none;display:grid;place-items:center;width:44px;height:35px;pointer-events:none}
+.mk-chip-ico canvas{display:block;width:100%;height:100%}
+.mk-chip-name{flex:1;min-width:0;font:800 18px/1.1 var(--font);text-align:left;white-space:nowrap;overflow:hidden;pointer-events:none}
+.mk-ability .mk-chip-ico{width:36px;height:30px}
+.mk-ability .mk-chip-name{font-size:15px}
+.mk-ability.empty{justify-content:center}
+html[lang=zh-CN] .mk-chip-name{font-size:20px} html[lang=zh-CN] .mk-ability .mk-chip-name{font-size:17px} html[lang=zh-CN] .mk-hat .mk-chip-name{font-size:15px}
+.mk-ability.empty .mk-chip-ico,.mk-ability.empty .mk-chip-name{display:none}
+.mk-ability.empty::before{content:"+";font:800 26px/1 var(--font)}
+html[data-ui=paint] .mk-ability.empty::before{content:"";width:24px;height:24px;background:var(--img-ico-plus) center/100% 100% no-repeat}
+.mk-ico-txt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-width:100%;max-height:100%;font:800 11px/1.05 var(--font);text-align:center;word-break:break-word;color:var(--ink)}
+/* hat chip + the 12 colours */
+.mk-look{grid-area:look;display:flex;gap:6px}
+.mk-hat{flex:none;width:76px;padding:2px 4px}
+.maker-sheet.land .mk-hat{width:90px}
+.mk-hat .mk-chip-ico{display:none}
+.mk-hat .mk-chip-name{font-size:13px;line-height:1.05;text-align:center;white-space:normal;max-height:100%}
+.mk-colors{flex:1;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:1fr 1fr;gap:3px}
+.mk-swatch{position:relative;padding:0;background:var(--sw);border:2px solid var(--ink);border-radius:6px;cursor:pointer}
+html[data-ui=paint] .mk-swatch{background:var(--sw-img) center/100% 100% no-repeat;border:0;border-radius:0}
+.mk-swatch.on{box-shadow:0 0 0 3px var(--ink),0 0 0 5px var(--yellow)}
+html[data-ui=paint] .mk-swatch.on{box-shadow:none}
+html[data-ui=paint] .mk-swatch.on::after{content:"";position:absolute;inset:-5px -4px;background:var(--img-sw-ring) center/100% 100% no-repeat;pointer-events:none}
+.mk-swatch:focus{outline:none}
+/* Save / Delete (the armed Delete = red, "Delete it?") */
+.mk-buttons{grid-area:btns;display:flex;gap:8px;align-items:stretch}
+.maker-sheet.land .mk-buttons{flex-direction:column-reverse;justify-content:center;gap:6px}
+.maker .big-button{min-width:0;font:800 18px/1 var(--font);letter-spacing:.03em;padding:6px 12px 9px;overflow:hidden;white-space:nowrap}
+html[data-ui=paint] .maker .big-button{padding:6px 12px 11px}
+.mk-del{flex:0 0 112px}
+.mk-save{flex:1}
+.maker-sheet.land .mk-del,.maker-sheet.land .mk-save{flex:0 0 44px}
+.mk-del.armed{background:var(--red);color:var(--on-paint)}
+html[data-ui=paint] .mk-del.armed{border-image:var(--bi-big-red)}
+/* picker: caption (the current pick, poster lettering) + the grid of cards */
+.mk-cap{grid-area:cap;display:flex;align-items:center;gap:8px;padding-right:44px}
+.mk-cap-ico{flex:none;display:grid;place-items:center;width:46px;height:37px}
+.mk-cap-ico:empty{display:none}
+.mk-cap-ico canvas{display:block;width:100%;height:100%}
+.mk-cap-name{--o:1.8px;--drop:2.5px 3.5px;flex:1;min-width:0;max-height:100%;font:800 22px/1.1 var(--font);letter-spacing:.02em;color:var(--yellow);overflow:hidden;white-space:normal;padding:3px 4px 5px 2px}
+.mk-grid{grid-area:grid;display:grid;grid-template-columns:repeat(var(--cols,6),var(--cw,44px));grid-auto-rows:var(--ch,44px);gap:5px;align-content:center;justify-content:center;overflow:hidden}
+.mk-pcell{width:var(--cw,44px);height:var(--ch,44px);padding:3px}
+.mk-pico{display:grid;place-items:center;width:100%;height:100%;pointer-events:none}
+.mk-pico canvas{display:block;max-width:100%;max-height:100%}
+.mk-pico.none::before{content:"";width:60%;height:60%;max-width:30px;max-height:30px;background:var(--img-ico-none) center/contain no-repeat}
+html:not([data-ui=paint]) .mk-pico.none::before{content:"\2205";font:800 22px/1 var(--font);background:none;width:auto;height:auto}
+
+/* Phones on their side under 800 px (iPhone SE 667, Galaxy 740-780): side by side, each team card got 84-105 px and
+   3-digit counts ("120 → 85") ran up to 19 px past its edge. The two cards stack in their column (OG stacks them on phones). */
+@media (max-height:500px) and (min-width:600px) and (max-width:799px){
+  .report-teams{grid-template-columns:minmax(0,1fr)}
+}
+
+/* ---- phone layout (OG max-width 640px) ---- */
+@media (max-width:640px){
+  #toolbar{left:0;right:0;bottom:0;transform:none;width:auto;max-width:none;align-items:stretch}
+  .tool-tabs{align-self:flex-start;margin-left:calc(8px + var(--safe-l));margin-right:calc(8px + var(--safe-r))}
+  .tool-panel{border-radius:0;box-shadow:none;height:calc(var(--bar-h) + var(--safe-b));padding:var(--tabs-overlap) calc(6px + var(--safe-r)) calc(3px + var(--safe-b)) calc(6px + var(--safe-l))}
+  html[data-ui=paint] .tool-panel{border-radius:0}
+  .tool-row{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;margin:0 -6px;padding:0 6px;scrollbar-width:none}
+  .tool-row::-webkit-scrollbar{display:none}
+  .tool{height:calc(var(--bar-h) - 9px)}
+  #teams{top:calc(var(--top-teams) + var(--safe-t));bottom:auto;width:var(--round);height:var(--round);border-radius:50%;padding:0;display:grid;place-items:center}
+  #teams:hover{transform:scale(1.06)}
+  #teams[aria-checked=true]{background:var(--yellow)}
+  #teams .label,#teams .switch{display:none}
+  #teams .team-icon{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  html[data-ui=paint] #teams{border-image:none;border-radius:0;background:var(--img-ico-teams) center/22px 22px no-repeat,var(--img-round) center/100% 100% no-repeat}
+  html[data-ui=paint] #teams[aria-checked=true]{background-image:var(--img-ico-teams),var(--img-round-on)}
+  html[data-ui=paint] #teams .team-icon{display:none}
+  #controls{flex-direction:column;top:calc(var(--top-controls) + var(--safe-t))}
+  .team-label.left{left:var(--lab-pl,calc(var(--mid-x,calc(var(--field-l) + var(--field-w)/2)) - 9px));transform:translateX(-100%)}
+  .team-label.right{left:var(--lab-pr,calc(var(--mid-x,calc(var(--field-l) + var(--field-w)/2)) + 9px));transform:none}
+}
+/* phone held sideways (attack 11-16): the column of 7 round buttons ran off the bottom (568x320: Follow + 中文 off the
+   screen, 4 over the tool bar). A row along the top instead, as on desktop; Team battle stays under its right end. */
+@media (max-width:640px) and (max-height:507px){
+  #controls{flex-direction:row;top:calc(10px + var(--safe-t))}
+}
+/* first-visit hand (ui/intro.js) */
+.intro-hand{position:fixed;left:0;top:0;z-index:60;pointer-events:none;transform-origin:37% 5%;filter:drop-shadow(0 3px 2px rgba(43,33,24,.35));will-change:transform,opacity}
+.intro-hand svg{display:block;width:100%;height:auto}
+.intro-tap{position:fixed;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #2b2118,inset 0 0 0 2px #2b2118;pointer-events:none;z-index:59;opacity:0}
+.intro-tap.go{animation:intro-tap .45s ease-out}
+@keyframes intro-tap{from{transform:scale(.35);opacity:1}to{transform:scale(1.35);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="safe-probe" aria-hidden="true"></div>
+  <canvas id="game"></canvas>
+  <div id="midline" aria-hidden="true" hidden></div>
+  <div id="team-labels" aria-hidden="true" hidden><span class="team-label left"></span><span class="team-label right"></span></div>
+  <div id="brush" aria-hidden="true"></div>
+  <div id="grab" aria-hidden="true"></div>
+  <nav id="toolbar"></nav>
+  <div id="paused" hidden></div>
+  <button id="teams" type="button" role="switch" aria-checked="false">
+    <span class="switch" aria-hidden="true"></span><span class="label"></span>
+    <svg class="team-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M13 17l4-4M15 15l4.5 4.5"/><path d="M20 4L9 15M7 13l4 4M9 15l-4.5 4.5"/></svg>
+  </button>
+  <button id="start" class="big-button" type="button" hidden></button>
+  <div id="result" hidden>
+    <p id="result-text" role="status"></p>
+    <div class="result-buttons">
+      <button id="again" class="big-button" type="button"></button>
+      <button id="stats-button" class="big-button secondary" type="button"></button>
+    </div>
+  </div>
+  <div id="controls">
+    <button id="maps-button" class="round-button" type="button" aria-expanded="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 6.5L8.6 4.3l6.8 2.2 6.1-2.2v13.4l-6.1 2.2-6.8-2.2-6.1 2.2zM8.6 4.3v13.4M15.4 6.5v13.4"/><path d="M16.6 8l3 3M19.6 8l-3 3"/></svg></button>
+    <button id="clear" class="round-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9.5 7l.5-2.5h4l.5 2.5M7 7l1 13h8l1-13M10.5 10.5l.3 6M13.5 10.5l-.3 6"/></svg></button>
+    <button id="pause" class="round-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><g class="bars"><path d="M9 6.5v11M15 6.5v11"/></g><g class="play"><path d="M8.5 5.8v12.4l10-6.2z"/></g></svg></button>
+    <button id="sound" class="round-button" type="button" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><g class="waves"><path d="M15.2 9.2a4 4 0 0 1 0 5.6"/><path d="M17.8 6.6a7.6 7.6 0 0 1 0 10.8"/></g><g class="cross"><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></g></svg></button>
+    <button id="slow" class="round-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17h14a3 3 0 0 0 3-3M6 17a6 6 0 1 1 10-4.5M18 9l1-4M20 10l2.5-3"/></svg><span class="speed"></span></button>
+    <button id="follow" class="round-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></svg></button>
+    <button id="lang" class="round-button" type="button"></button>
+  </div>
+  <pre id="stats" hidden></pre>
+  <div id="counts" hidden></div>
+</div>
+<script>
+// If the game's code never starts (a file failed to load, or the browser is too old for it), say so instead of
+// leaving a blank white page. Module scripts run before 'load'; main.js sets __pbBooted as its first line.
+addEventListener('load', function () {
+  if (window.__pbBooted) return;
+  var zh = false;
+  try { var l = localStorage.getItem('paint-battle:lang'); zh = l ? l === 'zh' : /^zh/i.test(navigator.language || ''); } catch (e) { zh = /^zh/i.test(navigator.language || ''); }
+  var p = document.createElement('p');
+  p.id = 'load-fail';
+  p.textContent = zh ? 'Paint Battle 没能加载，请刷新页面。' : 'Paint Battle couldn\'t load. Try reloading the page.';
+  document.body.appendChild(p);
+  document.documentElement.classList.add('ready');
+});
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
