@@ -25,6 +25,9 @@
 //   name the player typed on a chip when there is one), then the + card (gone at 12 made). The picked made card gets an
 //   edit button right after it (a narrow pencil card). refreshMine(pick) after a save / delete rebuilds the made cards
 //   (tools.js setMineTools) and picks `pick`.
+// - OURS (Part 2 step 9, STEP9.md): setCampaign(on, priceOf) for a campaign battle: the Terrain tab is hidden (the map
+//   is the level) and every unit card shows its paint price on a blue chip (priceOf(type) -> paint, or null = not for
+//   sale here: the card can't be picked). Off again = the sandbox's bar as it was.
 import { CATEGORIES as ALL_CATEGORIES, TOOLS, toolSpec, setMineTools } from './tools.js';
 import { getDef } from '../sim/defs.js';
 import { t, unitName } from './strings.js';
@@ -43,6 +46,7 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
   if (mine) setMineTools(mine.types());   // STEP8 UI: the made units' tools (end of TOOLS)
   let tab = ALL_CATEGORIES[0], selected = -1;
   const lastPicked = {};
+  let hiddenCats = new Set(), priceOf = null; // STEP9 UI: a campaign battle: tabs left out (Terrain), unit prices
   root.innerHTML = '';
   const tabs = document.createElement('div'); tabs.className = 'tool-tabs';
   const strip = document.createElement('div'); strip.className = 'tab-scroll'; strip.setAttribute('role', 'tablist');
@@ -57,12 +61,14 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
   const registered = (tl) => tl.kind !== 'unit' || !!getDef(tl.type);
   const isSecret = (tl) => tl.category === 'secret';
   const locked = (tl) => !!secret && isSecret(tl) && !secret.has(tl.type);
-  const live = (tl) => registered(tl) && !locked(tl);
+  const priced = (tl) => !priceOf || tl.kind !== 'unit' || priceOf(tl.type) != null; // STEP9 UI: not for sale = can't pick
+  const live = (tl) => registered(tl) && !locked(tl) && priced(tl);
   const anySecret = TOOLS.some((tl) => isSecret(tl) && registered(tl));
   const members = (cat) => { const m = []; TOOLS.forEach((tl, i) => { if (tl.category === cat && (ALL || registered(tl) || (cat === 'secret' && anySecret))) m.push(i); }); return m; };
   const firstLive = (cat) => members(cat).find((i) => live(TOOLS[i]));
   let CATEGORIES = ALL_CATEGORIES.filter((c) => (c === 'mine' ? !!mine : ALL || members(c).length > 0)); // STEP8 UI: Mine = the maker is there
   if (ALL_N > 1 && ALL_N < CATEGORIES.length) CATEGORIES = [...CATEGORIES.filter((c) => c !== 'terrain').slice(0, ALL_N - 1), 'terrain'];
+  const shownCats = () => CATEGORIES.filter((c) => !hiddenCats.has(c)); // STEP9 UI
   const nameOf = (tl) => unitName(tl.kind === 'unit' ? tl.type : tl.kind);
   const whereOf = (tl) => (secret && secret.mapOf ? t('map_' + secret.mapOf(tl.type)) : ''); // a locked card's map name
   const tabWord = (cat) => { const w = t('tab_' + cat); return w === 'tab_' + cat ? cat : w; };
@@ -78,6 +84,7 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
     const img = iconFor(toolSpec(tl), now); img.classList.add('tool-icon');   // now: a made card after a save shows its picture at once
     const nm = document.createElement('span'); nm.className = 'tool-name';
     b.append(img, nm);
+    if (tl.kind === 'unit') { const pr = document.createElement('span'); pr.className = 'tool-price'; pr.hidden = true; pr.setAttribute('aria-hidden', 'true'); b.append(pr); } // STEP9 UI: its price in a campaign battle
     if (tl.category === 'mine') { // STEP8 UI: a made unit: the name the player typed on a chip (none = no chip)
       b.classList.add('made');
       const tag = document.createElement('span'); tag.className = 'tool-tag'; tag.setAttribute('aria-hidden', 'true');
@@ -120,6 +127,8 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
       b.querySelector('.tool-name').textContent = lk ? '' : n;
       const wh = b.querySelector('.tool-where'); if (wh) { wh.textContent = whereOf(tl); fitWhere(wh); }
       const tg = b.querySelector('.tool-tag'); if (tg) { const s = mine && mine.tag ? mine.tag(tl.type) : ''; tg.textContent = s; tg.hidden = !s; b.classList.toggle('tagged', !!s); if (s) fitTag(tg); }
+      const pr = b.querySelector('.tool-price'); // STEP9 UI: the paint price (campaign battle only; a locked card shows none)
+      if (pr) { const p = priceOf && !lk ? priceOf(tl.type) : null; pr.textContent = p != null ? String(p) : ''; pr.hidden = p == null; b.classList.toggle('priced', p != null); if (p != null) b.setAttribute('aria-label', `${n}: ${p}`); }
     });
     addEl.setAttribute('aria-label', t('make_new')); editEl.setAttribute('aria-label', t('edit'));
   }
@@ -145,7 +154,7 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
   }
   function renderRow(cat, measure = false) {
     const kids = members(cat).map(i => {
-      const b = toolEls[i], lk = locked(TOOLS[i]), off = !lk && !registered(TOOLS[i]);
+      const b = toolEls[i], lk = locked(TOOLS[i]), off = !lk && (!registered(TOOLS[i]) || !priced(TOOLS[i])); // STEP9 UI: + not for sale
       b.classList.toggle('off', off);
       b.classList.toggle('locked', lk);
       if (off) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
@@ -227,7 +236,7 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
     if (i !== undefined) { selectIndex(i, false, smooth); return; }
     switchTab(cat, smooth); paintState(); // ?alltabs: a tab with no registered unit yet opens greyed; the old tool stays
   }
-  function nextTab(dir) { const k = CATEGORIES.indexOf(tab); openTab(CATEGORIES[(k + dir + CATEGORIES.length) % CATEGORIES.length], true); }
+  function nextTab(dir) { const C = shownCats(), k = C.indexOf(tab); openTab(C[(k + dir + C.length) % C.length], true); } // STEP9 UI: shown tabs only
   function selectSlot(slot) { const i = members(tab)[slot]; if (i !== undefined) selectIndex(i); }
   function showTip(i) {
     const b = toolEls[i]; if (!b) return;
@@ -254,7 +263,7 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
   };
   // Size the tab slots to the room the strip has; returns the strip width (CSS px).
   function layoutTabs(toolsW) {
-    const n = tabEls.length, cs = getComputedStyle(tabs);
+    const n = shownCats().length, cs = getComputedStyle(tabs); // STEP9 UI: a hidden tab takes no slot
     const margins = (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0);
     let room, rows = 1, per = n, slot, scroll = false;
     if (phone()) room = root.getBoundingClientRect().width - margins;
@@ -305,7 +314,7 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
     let w = 0;
     if (!phone()) {
       const keep = tab;
-      for (const cat of CATEGORIES) { renderRow(cat, true); w = Math.max(w, panel.getBoundingClientRect().width); }
+      for (const cat of shownCats()) { renderRow(cat, true); w = Math.max(w, panel.getBoundingClientRect().width); } // STEP9 UI: shown tabs only
       renderRow(keep);
       // step 7: Terrain has 11 tools (654 px). Where that is wider than the room left of the Team battle pill (641-810 px
       // wide windows, phones on their side) the panel stops there and the long row wraps to a second line.
@@ -363,9 +372,24 @@ export function createToolbar(root, { iconFor, onSelect, onLayout, secret = null
     }
     renderRow(tab); paintState(); fitWidth();
   }
+  // STEP9 UI: a campaign battle (on) or the sandbox (off). on: Terrain hidden, prices on the unit cards, a picked tool that
+  // can't be used here (terrain, not for sale) gives way to the open tab's first unit (Army's when Terrain was open).
+  function setCampaign(on, price = null) {
+    hiddenCats = on ? new Set(['terrain']) : new Set();
+    priceOf = on && typeof price === 'function' ? price : null;
+    tabEls.forEach((b, k) => { b.hidden = hiddenCats.has(CATEGORIES[k]); });
+    relabel();
+    const cur = TOOLS[selected];
+    if (hiddenCats.has(tab) || !cur || !live(cur)) {
+      const cat = hiddenCats.has(tab) ? shownCats()[0] : tab;
+      const i = (lastPicked[cat] !== undefined && live(TOOLS[lastPicked[cat]]) ? lastPicked[cat] : firstLive(cat)) ?? firstLive(shownCats()[0]);
+      if (i !== undefined) selectIndex(i, true);
+    }
+    renderRow(tab); paintState(); fitWidth();
+  }
   return {
-    el: root, selectIndex, selectSlot, nextTab, openTab, refreshSecret, openSecret, refreshMine, relabel() { relabel(); fitWidth(); }, fitWidth,
-    get tab() { return tab; }, get tabs() { return CATEGORIES.slice(); },
+    el: root, selectIndex, selectSlot, nextTab, openTab, refreshSecret, openSecret, refreshMine, relabel() { relabel(); fitWidth(); }, fitWidth, setCampaign, // STEP9 UI: setCampaign
+    get tab() { return tab; }, get tabs() { return shownCats(); }, // STEP9 UI: the tabs shown
     get selected() { return selected; }, get tool() { return selected >= 0 ? toolSpec(TOOLS[selected]) : null; },
   };
 }

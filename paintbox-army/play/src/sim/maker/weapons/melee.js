@@ -34,7 +34,7 @@ import { tossable } from '../../units/sports/_lib.js';
 import { shoved } from '../../units/sports/_lib.js';
 import { perchOf } from '../../combat/index.js';
 import {
-  ACT, M, NEAR, used, scale, heavy, signed, range, pose, unpose, poseAge, poseFor, close, fight, hit, empty, iceCrack, airborne, reachable,
+  ACT, M, NEAR, used, scale, heavy, signed, range, pose, unpose, poseAge, poseFor, close, fight, hit, empty, iceCrack, airborne, lowFlyer, reachable,
 } from './melee-lib.js';
 
 const Q = new Array(64).fill(null);   // query scratch (club, slam, shove)
@@ -432,7 +432,7 @@ registerWeapon({
     if (bag.phase === WINDUP) {
       const t = u.target >= 0 ? w.unitById(u.target) : null;
       if (t && t.hp > 0) bag.aimA = Math.atan2(t.y - u.y, t.x - u.x);
-      if (1 - (bag.timer - w.time) / SLAM.windup >= SLAM.landAt && !airborne(u)) { bag.phase = RECOVER; slamHit(w, u, bag); }
+      if (1 - (bag.timer - w.time) / SLAM.windup >= SLAM.landAt && (!airborne(u) || lowFlyer(u))) { bag.phase = RECOVER; slamHit(w, u, bag); }   // ATTACK3 L4: a flyer slams at the bottom of its dive (z <= 6: never quite lands, the slam never came)
       return;
     }
     if (w.time >= bag.timer) slamEnd(w, u, bag);

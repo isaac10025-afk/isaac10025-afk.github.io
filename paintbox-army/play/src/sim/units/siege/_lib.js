@@ -25,6 +25,10 @@ export const CREW = Object.freeze({
   slotFit: 0.9,        // attack 11-16: a slot is blocked if wall lies within this x the crewman's radius ...
   slotWalk: 2,         // ... then the crewman stands at the first free point from the slot toward the machine, every 2 px
   slotTurns: 12,       // ... or else round the machine at the slot's distance, 15 degree steps each way
+  defend: 34,          // attack 3 (11-18): an enemy this close (px between bodies) to a crewman on duty: he steps out and
+                       // fights it (his own melee brain), then goes back to the slot. Before, crew stood at their slots 8-30 px
+                       // from enemies hacking at the machine and never swung (their reach is 6 px)
+  leash: 70,           // ... but never farther than this from his slot (px)
 });
 export const CROSS = Object.freeze({
   pickR: 120,          // px: units of the tower's side this close to a docked tower may cross
@@ -258,6 +262,10 @@ export function crewDuty(world, u) {
   slotPos(m, b.slot, _sp);
   freeSlot(world, m, u, _sp);                        // attack 11-16: never a slot inside a wall
   const dx = _sp[0] - u.x, dy = _sp[1] - u.y, d = hypot(dx, dy);
+  if (u.def.melee && u.possessed !== 1 && d <= CREW.leash && u.target >= 0) {   // attack 3: an enemy at hand: fight it (the brain's goal stands)
+    const t = world.unitById(u.target);
+    if (t && t.hp > 0 && !(t.z > 30) && hypot(t.x - u.x, t.y - u.y) - u.radius - t.radius <= CREW.defend) return true;
+  }
   const sp = d < CREW.slotStop ? 0 : Math.min(u.def.runSpeed, CREW.slotGain * d + hypot(m.vx, m.vy));
   u.goalX = d > 0.001 ? (dx / d) * sp : 0; u.goalY = d > 0.001 ? (dy / d) * sp : 0;
   u.pathing = 1;                                     // no formation pull while crewing

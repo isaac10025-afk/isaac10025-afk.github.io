@@ -8,7 +8,7 @@
 // Pose (STEP6.md, same codes for all three): b.act 1 hop -> `hop` (stretched, u.z > 0 along the arc), 2 land ->
 // `land` (squashed, 0.25 s); art reads b.inside (count) for dark shapes inside.
 import {
-  boss, spawnedSlime, initBag, targetOf, setState, act, canAuto, shrug, hittable, grounded, grabbable, knock,
+  boss, spawnedSlime, initBag, targetOf, setState, act, canAuto, shrug, hittable, grounded, high, grabbable, knock,
   swallow, releaseAll, insideCount, captivesOf, damage, depthAt, splatNoise, hooks, hypot, STATE, ENEMY, BOSS, WET, LEAP, TAU,
 } from './_lib.js';
 import { followGroup } from '../../systems/navigation.js';
@@ -96,10 +96,12 @@ function squash(w, u) {
   const n = w.queryMask(u.x, u.y, R + BOSS.MARGIN, ENEMY[u.faction], SQ, SQ.length);
   for (let k = 0; k < n; k++) {
     const o = SQ[k]; SQ[k] = null;
-    if (!hittable(u, o) || !grounded(o) || o.def.prop) continue;
+    // ATTACK3 L3: low flyers (bees, drones, a ghost: up to 30 px, under its body) are squashed too; it hopped onto a bee
+    // swarm or a drone again and again and never touched them while they stung it to death (STEP6: melee reaches them)
+    if (!hittable(u, o) || high(o) || o.def.prop) continue;
     if (hypot(o.x - u.x, o.y - u.y) > R + o.radius) continue;
     damage(w, o, s.squash, u, undefined, o.x, o.y);   // from above: shields don't help
-    if (o.hp > 0) knock(w, o, u.x, u.y, s.squashPush, s.squashKnock);
+    if (o.hp > 0 && grounded(o)) knock(w, o, u.x, u.y, s.squashPush, s.squashKnock);
   }
   splatNoise(w, u.x, u.y, 0.8, 260);
   u.attack = 1;

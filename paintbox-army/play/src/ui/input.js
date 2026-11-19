@@ -250,6 +250,11 @@ export function attachInput(canvas, ring, opts) {
   canvas.addEventListener('pointerleave', leave);
   canvas.addEventListener('wheel', wheel, { passive: false });
   canvas.addEventListener('contextmenu', ctxmenu);
+  // STEP9 UI: a stroke that lifts while still moving (a flick: fast painting) made Chrome start a fling, and the next tap
+  // within ~250 ms only stopped that fling: no click, so a quick tap on Clear / START / a card right after did nothing
+  // (tests/campaign-ui.browser.mjs, 11-19). Cancelling the canvas's touchmove means Chrome never scrolls or flings from a
+  // stroke; painting, pinching and possess all run on pointer events, which this does not touch.
+  canvas.addEventListener('touchmove', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
 
   syncRadius();
   return {

@@ -41,6 +41,13 @@ export const SHOT = Object.freeze({
   apexMin: 60,
   scatterPer: 0.05,    // lands within (0.05 x dist + 6) px of the aim
   scatterBase: 6,
+  // attack 3 (11-18): it shot at anything, own men or not: boulders landed on its own soldiers brawling with the target and
+  // rolled on through them, and a dragon overhead got a boulder dropped on whoever stood under it (a boulder can't touch a
+  // flyer: z > 12). Now it holds the shot while an own-side unit is near the landing or the roll, like OG's grenadier
+  // (blast + 8), and never aims at a flyer up in the air.
+  friendGap: 36,       // px round the aim point ...
+  friendLane: 18,      // ... and either side of the 160 px roll after it
+  skyZ: 30,            // a target higher than this is out of a boulder's reach
 });
 export const BOULDER = Object.freeze({
   r: 9,                // px: the rock
@@ -175,13 +182,28 @@ function fire(world, u, tx, ty) {
   return p;
 }
 
-// An enemy within [min, max] when the target is too close (cap 32 looked at).
+// An enemy within [min, max] when the target is too close or up in the air (cap 32 looked at).
 const ALT = new Array(32);
 function altTarget(world, u, min, max) {
   const n = world.queryMask(u.x, u.y, max, ENEMY[u.faction], ALT, 32);
   let best = null, bd = Infinity;
-  for (let k = 0; k < n; k++) { const o = ALT[k]; ALT[k] = null; if (!(o.hp > 0)) continue; const d = hyp(o.x - u.x, o.y - u.y); if (d >= min && d < bd) { bd = d; best = o; } }
+  for (let k = 0; k < n; k++) { const o = ALT[k]; ALT[k] = null; if (!(o.hp > 0) || o.z > SHOT.skyZ) continue; const d = hyp(o.x - u.x, o.y - u.y); if (d >= min && d < bd) { bd = d; best = o; } }
   return best;
+}
+// attack 3: an own-side unit near the landing point (ax, ay) or along the roll after it (direction from the catapult)?
+let _fu = null, _fx = 0, _fy = 0, _fdx = 0, _fdy = 0, _fh = false;
+function friendOne(o) {
+  if (_fh || o === _fu || !(o.hp > 0) || o.faction !== _fu.faction || o.z > 12) return;
+  const rx = o.x - _fx, ry = o.y - _fy, along = rx * _fdx + ry * _fdy;
+  if (hyp(rx, ry) <= SHOT.friendGap + o.radius * 0.5) { _fh = true; return true; }
+  if (along > 0 && along < BOULDER.rollDist && Math.abs(rx * _fdy - ry * _fdx) <= SHOT.friendLane + o.radius) { _fh = true; return true; }
+}
+function friendInWay(world, u, ax, ay) {
+  const dx = ax - u.x, dy = ay - u.y, d = hyp(dx, dy) || 1;
+  _fu = u; _fx = ax; _fy = ay; _fdx = dx / d; _fdy = dy / d; _fh = false;
+  world.query(ax + _fdx * BOULDER.rollDist * 0.5, ay + _fdy * BOULDER.rollDist * 0.5, BOULDER.rollDist * 0.5 + SHOT.friendGap + 46, friendOne);
+  _fu = null;
+  return _fh;
 }
 
 const _pt = new Float32Array(2);
@@ -197,6 +219,11 @@ function brain(world, u) {
   const speed = (u.possessed === 1 ? D.possessSpeed : D.walkSpeed) * k, min = u.possessed === 1 ? SHOT.possessMin : SHOT.min;
   if (!t) { A.setState(u, S.ADVANCE); A.pathTo(world, u, _pt[0], _pt[1], speed, false); return; }
   let dx = t.x - u.x, dy = t.y - u.y, d = hyp(dx, dy) || 0.001;
+  if (t.z > SHOT.skyZ && u.possessed !== 1) {   // attack 3: a flyer up there: a ground target instead, else wait
+    const alt = altTarget(world, u, min, SHOT.max);
+    if (!alt) { A.setState(u, S.ALERT); u.face = Math.atan2(dy, dx); b.aimAt = -1; return; }
+    t = alt; dx = t.x - u.x; dy = t.y - u.y; d = hyp(dx, dy) || 0.001;
+  }
   if (d < min) {
     const alt = altTarget(world, u, min, SHOT.max);
     if (alt) { t = alt; dx = t.x - u.x; dy = t.y - u.y; d = hyp(dx, dy) || 0.001; }
@@ -208,7 +235,7 @@ function brain(world, u) {
   u.face = Math.atan2(ay - u.y, ax - u.x);
   if (b.reload > 0 || k === 0) { b.aimAt = -1; return; }
   if (b.aimAt < 0) b.aimAt = world.time;
-  if (world.time - b.aimAt >= SHOT.aim && Math.abs(A.angDiff(u.heading, u.face)) <= SHOT.aimTolerance) fire(world, u, ax, ay);
+  if (world.time - b.aimAt >= SHOT.aim && Math.abs(A.angDiff(u.heading, u.face)) <= SHOT.aimTolerance && (u.possessed === 1 || !friendInWay(world, u, ax, ay))) fire(world, u, ax, ay);
 }
 
 const D = registerUnit({

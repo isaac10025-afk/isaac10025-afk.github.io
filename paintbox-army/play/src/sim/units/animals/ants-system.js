@@ -328,7 +328,7 @@ function claims(w, col, e, hill) {
   for (let l = 0; l < MAX_CLAIMS; l++) {
     const q = e * MAX_CLAIMS + l, c = col.claims[q];
     if (c === null) continue;
-    if (c.colony !== e + 1 || c.eaten === 1 || c.removed === true || w.time - col.claimedAt[q] > CORPSE_CLAIM_TIME) {
+    if (c.colony !== e + 1 || c.eaten === 1 || c.removed || w.time - col.claimedAt[q] > CORPSE_CLAIM_TIME) {
       if (c.colony === e + 1 && c.eaten !== 1) { release(c); letLie(w, c); }
       col.claims[q] = null; continue;
     }

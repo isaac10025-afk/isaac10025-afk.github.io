@@ -177,7 +177,7 @@ export function run(world) {
             if (rr > 0) {
               const k = dist <= BLOCK_FULL * contact ? 1 : (contact - dist) / ((1 - BLOCK_FULL) * contact);
               vx += ax * rr * k; vy += ay * rr * k;
-              if (pushy && c.faction === fac) { blocked += rr * k; sideSum += ((rawY * ax - rawX * ay) / s0) * rr * k; }
+              if (pushy && (c.faction === fac || lowC === 2)) { blocked += rr * k; sideSum += ((rawY * ax - rawX * ay) / s0) * rr * k; } // OURS (attack 3): || a prop (PROP_DETOUR below)
             }
           }
         }
@@ -190,7 +190,11 @@ export function run(world) {
     }
     // 4. blocked twice: speed s·s0 → s²·s0 (OG game.js:13707-13710)
     if (s0sq > 1) { const s = Math.sqrt((vx * vx + vy * vy) / s0sq); if (s < 1) { vx *= s; vy *= s; } }
-    // 5. detour around blocking friends (OG game.js:13711-13720)
+    // 5. detour around blocking friends (OG game.js:13711-13720). OURS (attack 3, 11-18): PROP_DETOUR. Trees and barrels
+    // (props) count as blockers too: OG only slid round friends, so a unit walking at a gap between two trees narrower than
+    // its body (the swamp willows; a giant needs 42 px) stood wedged in it, pushing, 6-11 s at a time; one tree in the
+    // way it only got round by luck. Now it slides round the trunk the same way it slides round a friend.
+
     if (blocked > 0) {
       const mean = sideSum / blocked;
       let side = mean > DETOUR_SIDE ? -1 : mean < -DETOUR_SIDE ? 1 : u.detour !== 0 ? Math.sign(u.detour) : (uid & 1 ? 1 : -1);

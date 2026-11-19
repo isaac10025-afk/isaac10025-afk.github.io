@@ -7,6 +7,7 @@ import {
   S, fac, LOCO, INTEL, range, hyp, setState, getTarget, perchOf, isUndead, ensure, hitAnim,
   dmg, push, toss, lightUp, sfx, hasWalls, hasWater, wetAt, goTo, followIntel, flee, trample, startled,
 } from './lib.js';
+import { reinGoal } from '../army/cavalry.js'; // OURS (user 11-18, cavalry circling): same rein-round as Cavalry
 
 const FULL = 290; // OG game.js:12627 (N: trample full speed, charge speed)
 // trample spec (OG P, game.js:12628-12639)
@@ -28,6 +29,12 @@ const FEAR_THROW = 0.5; // OG game.js:12835
 const ROLE_FEAR = 2; // OG game.js:12836
 const BURN_THROW = 0.75; // OG game.js:12722
 const MELEE_DMG = 32; // OG game.js:12875
+// OURS (user 11-18, cavalry circling; see cavalry.js REIN / CUT): when the trample hits nobody, the ape cuts the target it
+// is charging as it rides past, reach 14 px past touching (OG: trample reach 1.5 only).
+const CUT = { ...TRAMPLE, reach: 14 };
+let cutT = null;
+const cutMask = (o) => o === cutT;
+function cutPast(w, u, t, sp) { cutT = t; const n = trample(w, u, sp, CUT, cutMask); cutT = null; return n > 0; }
 const SNAKE_STRIDE = 3; // OG game.js:16829 (R: body points checked every 3rd)
 const SNAKE_SPACING = 3; // OG game.js:16892 (617.c: body point spacing px)
 
@@ -166,10 +173,12 @@ function brain(w, u) {
   }
   if ((!charging && d > 240) || d > 380) { setState(u, S.ADVANCE); goTo(w, u, tgt.x, tgt.y, WALK, clear); return; } // OG game.js:12764-12768
   setState(u, S.CHARGE); // OG game.js:12769-12779
-  const lead = Math.min(d / FULL, 0.4), lx = dx + tgt.vx * lead, ly = dy + tgt.vy * lead, A = hyp(lx, ly) || 0.001;
-  u.goalX = lx / A * FULL; u.goalY = ly / A * FULL;
+  if (u.possessed === 1 || !reinGoal(u, dx, dy, WALK)) { // OURS: target off the nose → rein round first (cavalry.js REIN)
+    const lead = Math.min(d / FULL, 0.4), lx = dx + tgt.vx * lead, ly = dy + tgt.vy * lead, A = hyp(lx, ly) || 0.001;
+    u.goalX = lx / A * FULL; u.goalY = ly / A * FULL;
+  }
   if (canTrample(w, u, sp)) {
-    if (trample(w, u, sp, TRAMPLE) > 0) { u.subState = 1; b.timer = w.time + 0.8 * range(w, 0.8, 1.25); } // OG game.js:12777
+    if (trample(w, u, sp, TRAMPLE) > 0 || cutPast(w, u, tgt, sp)) { u.subState = 1; b.timer = w.time + 0.8 * range(w, 0.8, 1.25); } // OG game.js:12777; OURS: || cutPast
   } else if (u.cooldown <= 0 && d <= u.radius + tgt.radius + 10) melee(w, u, tgt, dx / d, dy / d); // OG game.js:12779
 }
 

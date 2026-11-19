@@ -16,6 +16,7 @@ function snapshot(u) {
     hatless: u.hatless | 0, singed: u.singed | 0, blind: u.blind | 0, plague: u.plague || 0, plagueAt: u.plagueAt,
     plagueFree: u.plagueFree | 0, kindled: u.kindled | 0, burning: u.burning || 0, curseType: u.curseType ?? null,
     infection: u.infection || 0, infectGroup: u.infectGroup ?? -1, z: u.z || 0, vz: u.vz || 0, spin: u.spin || 0,
+    infectTeam: u.infectTeam ?? -1,   // attack 4 L2: + infectTeam (OG drops it)
     thrownAt: u.thrownAt, arrowsIn: u.arrowsIn | 0, arrows: u.arrows || null,
   };
 }
@@ -34,6 +35,9 @@ function restore(k, c) {
   k.infection = inf ? (d.turnsWhenKilled ? Infinity : (Number.isFinite(c.infection) ? c.infection : 1)) : 0; // Infinity → 1 s
   k.infectType = inf ? rt : null;
   k.infectGroup = inf ? c.infectGroup : -1;
+  // attack 4 L2 (OURS; OG 571.d drops it too): the bite's team survives the curse. A bitten soldier frogged by a Mage in a
+  // Team battle rose as an Undead zombie frog (team -1): a third side the result never counts, its bites more of them.
+  k.infectTeam = inf ? c.infectTeam : -1;
   k.z = k.pz = c.z; k.vz = c.vz; k.spin = c.spin; k.thrownAt = c.thrownAt;
   k.arrowsIn = Math.min(2, c.arrowsIn);                     // OG game.js:10710: 2 stuck arrows max
   k.arrows = c.arrows;

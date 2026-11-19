@@ -35,6 +35,8 @@ const T = {
   dive: 0.5,                        // s of the dive pose
   downTime: 3,                      // s under after a dive before it may burst again
   first: 1.5,                       // s under after it is placed before its first burst
+  shore: 12,                        // ATTACK3 L3: a crowd in the water: dry spots looked for in rings this far apart ...
+  shoreReach: 0.8,                  // ... out to 0.8 x crowdR from it (the burst still reaches them)
 };
 const UNDER = 1, RUMBLE = 2, BURST = 3, UP = 4, DIVE = 5;   // u.subState = b.act (STEP6.md)
 const PT = new Float64Array(3), BQ = new Array(96);
@@ -44,6 +46,26 @@ function canSurface(w, x, y) {
   if (x < 20 || y < 20 || x > w.W - 20 || y > w.H - 20) return false;
   if (w.walls.count > 0 && w.walls.isSolidAt(x, y)) return false;
   return !(w.waterCells > 0 && depthAt(w, x, y) >= WET);
+}
+// Where to burst: the thickest crowd standing on dry ground; else (ATTACK3 L3) the thickest crowd anywhere, burst from the
+// dry ground next to it (the burst reaches 70 px). Riflemen wading in the shallows of a river had no crowd "on dry
+// ground", so the worm lay under their feet doing nothing, and they couldn't see it: neither side moved again.
+function pickBurst(w, u) {
+  const R = T.crowdR * u.shrink;
+  if (thickestCrowd(w, u, u.x, u.y, T.scan, R, canSurface, PT)) return true;
+  if (!thickestCrowd(w, u, u.x, u.y, T.scan, R, null, PT)) return false;
+  const cx = PT[0], cy = PT[1];
+  for (let r = T.shore; r <= R * T.shoreReach; r += T.shore) {
+    let best = Infinity, bx = 0, by = 0;
+    for (let k = 0; k < 12; k++) {
+      const a = k * Math.PI / 6, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      if (!canSurface(w, x, y)) continue;
+      const d = hypot(x - u.x, y - u.y);
+      if (d < best) { best = d; bx = x; by = y; }
+    }
+    if (best < Infinity) { PT[0] = bx; PT[1] = by; return true; }
+  }
+  return false;
 }
 function goUnder(w, u) {
   const b = u.b;
@@ -120,7 +142,7 @@ function brain(w, u) {
     let have = false;
     if (t) { b.x0 = t.x; b.y0 = t.y; have = true; }
     else if (u.possessed !== 1) {
-      if (now >= b.next2) { b.next2 = now + T.crowdEvery; b.k = thickestCrowd(w, u, u.x, u.y, T.scan, T.crowdR * u.shrink, canSurface, PT) ? 1 : 0; if (b.k) { b.x0 = PT[0]; b.y0 = PT[1]; } }
+      if (now >= b.next2) { b.next2 = now + T.crowdEvery; b.k = pickBurst(w, u) ? 1 : 0; if (b.k) { b.x0 = PT[0]; b.y0 = PT[1]; } }
       have = b.k === 1;
     }
     if (!have) { setState(u, STATE.IDLE); return; }

@@ -7,7 +7,7 @@
 // Pose codes (STEP6.md): b.act 1 grab / hold (b.v0..b.v3 = held unit ids, -1 none: a tentacle to each), 2 ink.
 // Effect projectile 'ink' (sits still, hits nothing): p.r radius px, p.age s since it spread, p.life its total s (4).
 import {
-  sea, initBag, prelude, targetOf, act, setState, hunt, idle, fleeing, chew, holdable, glue, tossTo, blindFor, heldBy,
+  sea, initBag, prelude, targetOf, act, setState, hunt, idle, fleeing, chew, holdable, glue, tossTo, blindFor, heldBy, bite,
   canAuto, hypot, STATE, ENEMY, DT, SEA,
 } from './_lib.js';
 import { registerProjectileKind, spawnProjectile, removeProjectile } from '../../combat/projectiles.js';
@@ -38,11 +38,15 @@ const T = {
   inkPose: 0.5,       // s of the ink pose (b.act 2)
   backTime: 1.5,      // s it backs away after inking
   chargeAt: 160,      // px: runs at a target closer than this, else walks
+  slam: 14,           // ATTACK3 L3 (ours): a tentacle slam at a foe it can't hold (giant, boss, a flying bee) ...
+  slamEvery: 1.1,     // ... every 1.1 s (the table gives it no plain attack: next to a giant it did nothing all battle)
   flammability: 0.3,  // soft and wet-ish
 };
 const HOLD = 1;   // subState
 const GQ = new Array(48).fill(null);
 
+/** Never holdable, whatever happens (heavy, boss, untossable): the octopus slams it instead. */
+function tooBig(o) { return o.mass > T.grabMass || !!o.def.boss || !!o.def.untossable || !!o.def.prop; }
 function getV(b, k) { return k === 0 ? b.v0 : k === 1 ? b.v1 : k === 2 ? b.v2 : b.v3; }
 function setV(b, k, id) { if (k === 0) b.v0 = id; else if (k === 1) b.v1 = id; else if (k === 2) b.v2 = id; else b.v3 = id; }
 
@@ -140,7 +144,11 @@ function brain(w, u) {
   }
   if (!t) { idle(w, u); return; }
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
-  if (d - t.radius <= u.radius + T.grabGap * 0.6) { setState(u, STATE.ENGAGE); u.face = Math.atan2(dy, dx); return; }   // close enough: waits for its grab
+  if (d - t.radius <= u.radius + T.grabGap * 0.6) {   // close enough: waits for its grab ...
+    setState(u, STATE.ENGAGE); u.face = Math.atan2(dy, dx);
+    if ((tooBig(t) || !holdable(t, T.grabMass)) && u.cooldown <= 0) { bite(w, u, t, T.slam, T.slamEvery, 60, 0.1); u.attack = 1; }   // ... or slams one it can't hold (too big, a bee or drone flying)
+    return;
+  }
   hunt(w, u, t, d < T.chargeAt ? T.run : T.walk, d < T.chargeAt ? STATE.CHARGE : STATE.ADVANCE);
 }
 

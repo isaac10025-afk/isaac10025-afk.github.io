@@ -1,4 +1,4 @@
-// Web game sites (Poki, CrazyGames, GamePix): the one place the game talks to a site's SDK. OURS.
+// Web game sites (Poki, CrazyGames, GamePix, Yandex Games / Playhop, Y8): the one place the game talks to a site's SDK. OURS.
 // The web build (tools/web-build.mjs) adds the site's SDK <script> and <meta name="pb-portal" content="poki|crazygames">
 // to index.html (GamePix also gets window.GamePixConfig = { lifecycle: 'manual' } before its tag). Everywhere else (laptop Play tile, the phone app, tests, the plain game folder) there is no meta and
 // no SDK: every call here does nothing and a break runs its callback at once, in the same tick.
@@ -12,6 +12,16 @@
 // -> promise (the gate: no ad before it resolves), lifecycle.gameStart() once, ads.interstitial() -> { success },
 // events.on('pause' | 'resume'). GamePix has no gameplay start/stop and no "ad started" callback: its pause during one
 // of our breaks (page visible) is that signal; any other pause holds the game and mutes until its resume.
+// Yandex Games v2 (bundle read 11-18 from yandex.ru/games/sdk/v2; the build loads /sdk.js, served by Yandex next to the
+// game): YaGames.init() -> ysdk; ysdk.features.LoadingAPI.ready(); ysdk.features.GameplayAPI.start() / stop();
+// ysdk.adv.showFullscreenAdv({ callbacks: { onOpen, onClose(wasShown), onError, onOffline } }); ysdk.on('game_api_pause' |
+// 'game_api_resume') = the site holds the game (its own overlays, hidden tab): hold + mute, like GamePix's pause; during
+// our break the ad's own hold is ours already. ysdk.environment.i18n.lang picks the language when the player never did.
+// Y8 minimal SDK 2.0 (bundle read 11-18, cdn.y8.com/minimal-sdk/2-0/y8.min.js, docs.y8.com/sdk): the script fires
+// 'y8sdk.ready' on window (or is there already); y8.sdk().init({ appId, autoLogin }, { gameId, preloadAdBreaks, sound,
+// onReady }); showAd({ type: 'next', name, beforeAd, afterAd, adBreakDone }) - adBreakDone always comes, also when Y8's own
+// cap (ad_timing, 180 s default) skips the ad. The app / game ids come from the build (<meta name="pb-y8-app|pb-y8-game">).
+// No gameplay start/stop, no site pause. autoLogin off: nothing here needs a Y8 login.
 // Rules kept (game-platform-port skill + CrazyGames requirements): gameplay calls at most one per second (CrazyGames
 // logs an ERROR under 1 s); gameplayStop before an ad; mute only once the ad really starts; every ad races a 60 s
 // timeout; no ad before the player has played; every SDK call in try/catch (CrazyGames can init, then throw).
@@ -74,6 +84,39 @@ function gamepix() {
   };
 }
 
+function yandex(Y) {
+  const F = Y.features || {};
+  let paused = false;
+  const sitePause = (b) => { note(b ? 'sitePause' : 'siteResume'); for (const f of holdFns) safe(() => f(b)); for (const f of muteFns) safe(() => f(b)); };
+  safe(() => Y.on('game_api_pause', () => { if (!inBreak && !paused) { paused = true; sitePause(true); } }));
+  safe(() => Y.on('game_api_resume', () => { if (paused) { paused = false; sitePause(false); } }));
+  const calm = (p) => { if (p && p.catch) p.catch(() => {}); };   // its calls answer with promises that can reject (off its page: no parent frame)
+  return {
+    start: () => calm(F.GameplayAPI.start()),
+    stop: () => calm(F.GameplayAPI.stop()),
+    loaded: () => calm(F.LoadingAPI.ready()),
+    ad: (onStart) => new Promise((done) => Y.adv.showFullscreenAdv({ callbacks: {
+      onOpen: onStart, onClose: () => done(), onError: () => done(), onOffline: () => done(),
+    } })),
+    lang: () => safe(() => Y.environment.i18n.lang) || '',
+  };
+}
+
+function y8site(Y) {
+  return {
+    start: () => {}, stop: () => {}, loaded: () => {},
+    ad: (onStart) => new Promise((done) => {
+      const p = Y.showAd({ type: 'next', name: 'new-battle', beforeAd: onStart, afterAd: () => {}, adBreakDone: () => done() });
+      if (p && p.catch) p.catch(() => done());
+    }),
+  };
+}
+const metaOf = (n) => { const m = typeof document !== 'undefined' && document.querySelector(`meta[name="${n}"]`); return (m && m.content) || ''; };
+
+const langFns = [];
+/** The site's language (Yandex: ysdk.environment.i18n.lang, e.g. 'ru', 'en', 'zh'); cb(code) once it is known. */
+export function onSiteLang(cb) { langFns.push(cb); }
+
 /** Call once at boot. Never awaited by the game. */
 export function initPortal() {
   if (SITE === 'poki' && window.PokiSDK) {
@@ -89,6 +132,23 @@ export function initPortal() {
       up();
       if (sdk.muted()) for (const f of muteFns) safe(() => f(true));
     }).catch(() => note('init failed'));
+  } else if (SITE === 'yandex' && window.YaGames) {
+    new Promise((res, rej) => { try { Promise.resolve(window.YaGames.init()).then(res, rej); } catch (e) { rej(e); } }).then((Y) => {
+      if (!Y || !Y.adv) throw new Error('no ysdk');
+      sdk = yandex(Y); const l = sdk.lang(); note('lang ' + l);
+      if (l) for (const f of langFns) safe(() => f(l));
+      up();
+    }).catch(() => note('init failed'));
+  } else if (SITE === 'y8') {
+    const app = metaOf('pb-y8-app'), game = metaOf('pb-y8-game') || app;
+    const go = () => {
+      if (sdk || !window.y8 || !window.y8.sdk) return;
+      let Y, p;
+      try { Y = window.y8.sdk(); p = Promise.resolve(Y.init({ appId: app, autoLogin: false }, { gameId: game, preloadAdBreaks: 'on', sound: 'on', onReady: () => note('y8 ads ready') })); }
+      catch (e) { p = Promise.reject(e); }
+      p.then(() => { sdk = y8site(Y); up(); }, () => note('init failed'));
+    };
+    if (window.y8 && window.y8.sdk) go(); else addEventListener('y8sdk.ready', go, { once: true });
   } else if (SITE === 'gamepix' && window.GamePix && window.GamePix.lifecycle) {
     sdk = gamepix(); safe(() => window.GamePix.lifecycle.loading(10)); note('loading');
     if (loadedAsked) loaded();   // ready comes once lifecycle.loaded() resolves (loaded() asks it)

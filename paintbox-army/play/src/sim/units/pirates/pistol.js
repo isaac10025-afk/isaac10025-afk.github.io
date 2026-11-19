@@ -31,6 +31,7 @@ const T = {
     band: 16, // px
     facing: 0.6, // rad
     circle: 0.4, // strafing
+    close: 110, // px/s stepping in (attack 3: at walk x 0.6 two empty pistols circled each other 20-45 px apart for whole fights)
   },
 };
 

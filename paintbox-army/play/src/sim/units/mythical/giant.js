@@ -302,11 +302,12 @@ function throwPick(world, u, reach) {
 function nearestTree(world, u) {
   K.queryMask(world, u.x, u.y, u.radius + TREE_REACH, 1 << K.FAC.Props, Q, 32);
   let o = null, best = Infinity;
+  const walled = K.wallCount(world);
   for (let k = 0; k < Q.length; k++) {
     const n = Q[k];
     if (n.type !== 'tree' || n.hp <= 0) continue;
     const c = K.hypot(n.x - u.x, n.y - u.y);
-    if (c < best && c - u.radius - n.radius <= TREE_REACH) { best = c; o = n; }
+    if (c < best && c - u.radius - n.radius <= TREE_REACH && (walled === 0 || K.lineOfSight(world, u.x, u.y, n.x, n.y))) { best = c; o = n; } // OURS (attack 3): a tree it can see (army/sniper.js TREE_LOS)
   }
   return o;
 }
@@ -317,6 +318,7 @@ function treeStep(world, u) {
   if (!e || e.hp <= 0 || e.type !== 'tree' || close) { u.subState = 0; return false; }
   const rx = e.x - u.x, ry = e.y - u.y, d = K.hypot(rx, ry) || 0.001;
   if (u.subState === TREE_WALK) {
+    if (K.wallCount(world) > 0 && !K.lineOfSight(world, u.x, u.y, e.x, e.y)) { u.subState = 0; return false; } // OURS (attack 3): sniper.js TREE_LOS
     if (d - u.radius - e.radius > 6) {
       K.setState(u, K.ST.ADVANCE);
       u.goalX = (rx / d) * G.walkSpeed; u.goalY = (ry / d) * G.walkSpeed;

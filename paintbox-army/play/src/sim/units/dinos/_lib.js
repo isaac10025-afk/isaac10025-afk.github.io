@@ -9,7 +9,7 @@
 //        lands on is hurt and knocked down.
 // Per-world state lives in a WeakMap (reset by Clear). No allocation per tick; no random draws unless a dino acts.
 import { registerUnit } from '../../defs.js';
-import { F, ENEMY, ALL_MASK, INT, maskWithout, maskHas } from '../../factions.js';
+import { F, ENEMY, ALL_MASK, INT, maskWithout, maskHas, isHostile } from '../../factions.js';
 import { STATE, LEAP, GRAVITY, WET, hypot, angleDiff } from '../../const.js';
 import { damage, push, toss, stun, infect, perchOf, blockFrac, splatNoise, depthAt, fleeSteer, meleeStrike, hooks } from '../../combat/index.js';
 import { moveTo, followGroup } from '../../systems/navigation.js';
@@ -183,7 +183,13 @@ function sense(w) {
   const now = w.time;
   for (let k = s.blind.length - 1; k >= 0; k--) {
     const e = s.blind[k], v = w.unitById(e.id);
-    if (!v || !(v.hp > 0) || now >= e.until) { if (v && e.prev === 0) v.blind = 0; drop(s, s.blind, k); continue; }
+    if (!v || !(v.hp > 0) || now >= e.until) {
+      if (v && e.prev === 0) v.blind = 0;
+      // ATTACK3 L3: it sees again: a friend it was swinging at blind is no target any more (OG's chooseTarget keeps a
+      // close current target without asking whose side it is on: blinded giants stood "fighting" each other for good)
+      if (v && v.target >= 0) { const t = w.unitById(v.target); if (t && !isHostile(v, t)) v.target = -1; }
+      drop(s, s.blind, k); continue;
+    }
     v.blind = 1;
     // melee swings go at whoever is nearest within the blind sight, friend or foe (the player still aims a possessed one)
     if (v.def.melee && v.possessed !== 1 && !v.def.prop) {

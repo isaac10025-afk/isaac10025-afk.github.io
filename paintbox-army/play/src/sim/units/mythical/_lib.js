@@ -139,7 +139,13 @@ export function lineOfSight(world, x0, y0, x1, y1) {
 export function depthAt(world, x, y) { return env.depthAt ? env.depthAt(world, x, y) : (world.waterAt ? world.waterAt(x, y) : 0); }
 export function wetAt(world, u) { return env.wetAt ? env.wetAt(world, u) : depthAt(world, u.x, u.y) >= WET; }
 export function waterCells(world) { return typeof world.waterCells === 'number' ? world.waterCells : 0; }
-export function nearestWet(world, x, y, r, out) { return env.nearestWet ? env.nearestWet(world, x, y, r, out) : false; }
+// OURS (attack 3, 11-18): WATER_LOS. Water behind a wall doesn't count: units walked to the nearest wet tile in a straight
+// line (a wounded boar to wallow, a burning unit to put itself out, a loose horse to drink), so on the step-7 maps (castle
+// moat, village pond) one stood pressed into the wall between it and the water for good (castle: a boar 20 s and on).
+// OG does the same; its painted fields rarely put a wall between a unit and the water that close.
+export function nearestWet(world, x, y, r, out) {
+  return (env.nearestWet ? env.nearestWet(world, x, y, r, out) : false) && (wallCount(world) === 0 || lineOfSight(world, x, y, out[0], out[1]));
+}
 export function oil(world) { return oilx.getOil ? oilx.getOil(world) : null; }
 // Corpse record fields (CORE-B combat/death.js addCorpse): t = death time, r = size, side = facing ±1.
 export function cTime(c) { return c.t !== undefined ? c.t : c.time; }

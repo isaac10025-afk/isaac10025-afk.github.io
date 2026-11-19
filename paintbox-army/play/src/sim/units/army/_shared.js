@@ -163,8 +163,15 @@ export function wetAt(w, u) {
   const d = u.def.aquatic ? (typeof w.depthUnder === 'function' ? w.depthUnder(u.x, u.y) : w.waterAt(u.x, u.y)) : w.waterAt(u.x, u.y);
   return d >= C.WET;
 }
-// Nearest wet tile centre within r (OG game.js:9835-9866: square rings, first ring with a hit decides).
+// OURS (attack 3, 11-18): WATER_LOS. Water behind a wall doesn't count: units walked to the nearest wet tile in a straight
+// line (a wounded boar to wallow, a burning unit to put itself out, a loose horse to drink), so on the step-7 maps (castle
+// moat, village pond) one stood pressed into the wall between it and the water for good (castle: a boar 20 s and on).
+// OG does the same; its painted fields rarely put a wall between a unit and the water that close.
 export function nearestWet(w, x, y, r, out) {
+  return nearestWetRaw(w, x, y, r, out) && (!anyWalls(w) || wallLine(w, x, y, out[0], out[1]));
+}
+// Nearest wet tile centre within r (OG game.js:9835-9866: square rings, first ring with a hit decides).
+function nearestWetRaw(w, x, y, r, out) {
   if (typeof w.nearestWet === 'function') return w.nearestWet(x, y, r, out);
   if (!anyWater(w) || !w.water) return false;
   const T = C.WALL_TILE, cols = w.tileCols || w.wallW, rows = w.tileRows || w.wallH;
@@ -375,7 +382,8 @@ function trampleCand(o) { if (o !== _trU && _trPick(_trU, o)) { _tr[_trN++] = o;
 export function trample(w, u, speed, P, maskFn) {
   const r = u.radius, hx = Math.cos(u.heading), hy = Math.sin(u.heading), undead = isUndead(u);
   _trN = 0; _trU = u; _trPick = maskFn || FAC.isHostile;
-  w.query(u.x, u.y, r + MAX_R + TRAMPLE_REACH, trampleCand); // OG game.js:258
+  const pad = P.reach ?? TRAMPLE_REACH; // OURS: P.reach = the cavalry's pass cut (cavalry.js CUT); OG always 1.5
+  w.query(u.x, u.y, r + MAX_R + pad, trampleCand); // OG game.js:258
   const n = _trN; _trU = null; _trPick = null;
   let hits = 0;
   for (let k = 0; k < n; k++) {
@@ -383,7 +391,7 @@ export function trample(w, u, speed, P, maskFn) {
     if (!(o.hp > 0) || o.dead || (o.climb || 0) > 0) continue; // OG game.js:263
     if (o.id === u.lastVictim && u.cooldown > 0) continue; // OG game.js:264
     const dx = o.x - u.x, dy = o.y - u.y;
-    if (hyp(dx, dy) > r + o.radius + TRAMPLE_REACH) continue; // OG game.js:268
+    if (hyp(dx, dy) > r + o.radius + pad) continue; // OG game.js:268
     if (dx * hx + dy * hy < 0) continue; // in front only (OG game.js:269)
     const j = Math.min(1, speed / P.fullSpeed); // OG game.js:273
     const m = damage(w, o, P.damage * j, u, 'blow'); // OG game.js:274

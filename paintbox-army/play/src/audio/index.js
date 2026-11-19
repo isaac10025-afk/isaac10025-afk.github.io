@@ -13,6 +13,8 @@
 //   mapsPanel(open) / lockedCard() / foundCard()   step 7 UI: paper rustle as the maps panel opens / closes, a padlock
 //                                  rattle for a locked Secret card, a paper pop as the Found card lands (its fanfare and
 //                                  the map's page flip come from the sim's `secret` / `map` events)
+//   starStamp(i) / paintOut() / campWin() / campLose()   step 9 UI: the campaign's result stamps (3 rising), out of paint,
+//                                  the win / lose stings
 //   setMadeLookup(recipeOf)        step 8: made units' recipes (body, weapon) for their sounds. Optional: in the browser the
 //                                  audio finds sim/maker recipeOf by itself (main.js has loaded the maker first)
 
@@ -64,4 +66,11 @@ const FOUND_LANDS = 0.3; // s: the Found card's pop-in (index.html found-in, 0.5
 export function mapsPanel(open) { if (E()) eng.playNamed('paper-rustle', open ? { vol: 1, rate: 1 } : { vol: 0.8, rate: 1.15 }); }
 export function lockedCard() { if (E()) eng.playNamed('padlock'); }
 export function foundCard() { if (E()) eng.playNamed('paper-pop', { delay: FOUND_LANDS }); }
+// OURS (step 9, STEP9 UI): the campaign. A star stamps onto the result card (i = 0, 1, 2: each a step up a major chord),
+// a paint stroke runs out of paint, a campaign battle is won / lost. Played in the middle, like ui().
+const STAMP_RATES = [1, 1.26, 1.5]; // playback rates of the 3 stamps: do, mi, so
+export function starStamp(i = 0) { if (E()) eng.playNamed('star-stamp', { rate: STAMP_RATES[Math.max(0, Math.min(2, i | 0))] }); }
+export function paintOut() { if (E()) eng.playNamed('paint-out'); }
+export function campWin() { if (E()) eng.playNamed('camp-win'); }
+export function campLose() { if (E()) eng.playNamed('camp-lose'); }
 export function dispose() { if (E()) { eng.dispose(); eng = null; } }

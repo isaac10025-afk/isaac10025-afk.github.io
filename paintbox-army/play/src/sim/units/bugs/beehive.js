@@ -4,7 +4,7 @@
 // it sends out a bee every 2.5 s (max 12 of its bees alive); hit = 4 bees burst out at once at the attacker (3 s
 // cooldown). Its bees carry b.home = its id and go back to hover round it when there's nothing to fight. Burns (0.9).
 // Owner: BUGS-SIM. Pose codes (STEP6.md): b.act 1 bees coming out → `buzz` (the hive shakes).
-import { bug, initBag, act, setState, unitOf, STATE, ENEMY, INT } from './_lib.js';
+import { bug, initBag, act, setState, unitOf, isHostileTo, STATE, ENEMY, INT } from './_lib.js';
 
 const T = {
   radius: 9,          // OG-raw radius (registerUnit ×1.1)
@@ -36,7 +36,7 @@ function release(w, u, n, foe) {
     const o = w.spawn('bee', u.x + Math.cos(a) * T.outR, u.y + Math.sin(a) * T.outR * 0.5 - 2, { team: u.team, group: u.group, faction: u.faction, heading: a, like: u });
     if (!o) break;
     o.b.home = u.id; o.z = o.pz = T.outZ; o.homeX = u.x; o.homeY = u.y - 6;
-    if (foe) { o.target = foe.id; o.react = 0; o.state = STATE.CHARGE; }   // out angry: alert sight, so it keeps the foe in view
+    if (foe && isHostileTo(o.faction, foe)) { o.target = foe.id; o.react = 0; o.state = STATE.CHARGE; }   // out angry: alert sight, so it keeps the foe in view; attack 3 lead: only at an enemy
     made++;
   }
   if (made > 0) { act(w, u, 1); w.emit('flap', { x: u.x, y: u.y, v: 0.4 * made, type: 'bee' }); }
@@ -83,7 +83,7 @@ bug({
   onHit(w, u, amount, att) {
     if (!(amount > 0) || w.time < u.b.next2) return;
     u.b.flag = 1;
-    if (att && att.hp > 0 && att !== u) u.b.k = att.id;   // the bees go for whoever hit it
+    if (att && att.hp > 0 && att !== u && isHostileTo(u.faction, att)) u.b.k = att.id;   // the bees go for whoever hit it; attack 3 lead (L4's find): a friend's blow (blinded, splash) still lets them out, at the nearest enemy
   },
   brain,
 });

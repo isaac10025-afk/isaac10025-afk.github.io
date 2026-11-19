@@ -16,6 +16,8 @@ const T = {
   flyH: 40,             // px: cruising height (a high flyer)
   rise: 3,              // 1/s: eases to cruising height
   minR: 100,            // px: rockets from this far ...
+  minAir: 45,           // px: ... but from this far at a flyer (the rocket bursts at it, 22 px blast: well clear of itself)
+  edge: 70,             // px: backing off, the field edge this close pushes it back in (ATTACK3 L3: it backed into a corner)
   maxR: 300,            // ... to this far
   want: 210,            // px: hovers this far from its target between shots
   band: 50,             // px: slack around `want`
@@ -108,6 +110,18 @@ function brain(w, u) {
   fight(w, u, false);
 }
 
+// Backing off from its target: away from it, but the field edge pushes it back in (ATTACK3 L3). Straight back put it in
+// a corner with a legion under it: too close to fire (rockets from 100 px), no room to back off, no spot to land on, for
+// the rest of the battle. Pushed in from the edge it flies over the enemy (melee can't reach it up there) and out the
+// other side, where it has room again.
+function backOff(w, u, dx, dy, d) {
+  let ax = -dx / d, ay = -dy / d;
+  const E = T.edge;
+  if (u.x < E) ax += 2 * (E - u.x) / E; else if (u.x > w.W - E) ax -= 2 * (u.x - (w.W - E)) / E;
+  if (u.y < E) ay += 2 * (E - u.y) / E; else if (u.y > w.H - E) ay -= 2 * (u.y - (w.H - E)) / E;
+  const m = hypot(ax, ay) || 1;
+  u.goalX = ax / m * T.speed; u.goalY = ay / m * T.speed;
+}
 // target work: in the air keep 100-300 px off and fire; landed: stand and fire if it can
 function fight(w, u, landed) {
   const b = u.b, now = w.time;
@@ -121,10 +135,10 @@ function fight(w, u, landed) {
   const own = u.possessed === 1;
   if (!landed) {
     if (d > T.want + T.band) { u.goalX = dx / d * T.speed; u.goalY = dy / d * T.speed; }
-    else if (d < T.want - T.band && !own) { u.goalX = -dx / d * T.speed; u.goalY = -dy / d * T.speed; }
+    else if (d < T.want - T.band && !own) backOff(w, u, dx, dy, d);
     else { const s = u.index & 1 ? 1 : -1; u.goalX = -dy / d * s * 0.4 * T.speed; u.goalY = dx / d * s * 0.4 * T.speed; }   // drift sideways
   }
-  const inRange = (d >= T.minR || own) && d <= (u.state === STATE.ENGAGE ? T.maxR * 1.1 : T.maxR);
+  const inRange = (d >= (t.z > 8 ? T.minAir : T.minR) || own) && d <= (u.state === STATE.ENGAGE ? T.maxR * 1.1 : T.maxR);
   if (now >= b.next && inRange && (clearLine(w, u) || u.z > 20) && Math.abs(angleDiff(u.heading, a)) < T.aimTol) {
     const lead = d / T.rocketSpeed;
     fire(w, u, t.x + t.vx * lead, t.y + t.vy * lead);

@@ -30,6 +30,8 @@ const T = {
   CELL_ASPECT: [0.8, 1.5], // picker cell width / height kept inside this
   ICON_K: 0.8,        // picker icon = this share of the cell
   NAME_MIN: 8,        // css px: smallest a long word shrinks to
+  GUARD_MS: 350,      // ms after the board changes under a finger (opens, picker in / out, closes) that a tap ... (= main.js TAP_GUARD)
+  GUARD_R: 40,        // css px ... this close to that finger is a double tap's second tap: swallowed
 };
 const KIND_ORDER = ['move', 'act', 'support', 'passive', 'death']; // ability picker blocks (catalogue order inside each)
 const W_ROW = new Map(WEAPONS.map((r) => [r.id, r]));
@@ -168,6 +170,35 @@ export function createMaker(opts) {
   const cap = h('div', 'mk-cap'); const capIco = h('span', 'mk-cap-ico'); const capName = h('span', 'mk-cap-name'); cap.append(capIco, capName);
   const grid = h('div', 'mk-grid'); grid.setAttribute('role', 'listbox');
   sheet.append(stage, nameBox, bodyRow, tSize.el, tHp.el, tSpeed.el, wChip.b, abilRow, lookRow, btns, cap, grid, close);
+
+  // ATTACK4 L1: a double tap's second tap landed on whatever the board had just put under the finger: + card -> Save (a
+  // default unit made unseen on 320-360 px phones), edit card -> Delete armed, weapon chip -> a weapon picked, X in a
+  // picker -> the maker closed (the draft lost), Save -> a toolbar card / tab picked instead of the unit just made. Every
+  // view change remembers the finger that caused it; a press or click near it within T.GUARD_MS is swallowed (window
+  // capture: inside the board, and after it closes on the toolbar and buttons; the field has its own guard, main.js
+  // input.guard). A tap elsewhere is never held up. The press decides, by when it happened (event timeStamp: a busy phone
+  // hands it over late, after a slow picker build): a swallowed press swallows its own click too.
+  let downX = -1e9, downY = -1e9, downT = -1e9, guardFrom = 0, guardUntil = 0, guardX = 0, guardY = 0, eatT = -1e9;
+  const guarded = (e) => e.timeStamp > guardFrom && e.timeStamp < guardUntil && Math.hypot(e.clientX - guardX, e.clientY - guardY) < T.GUARD_R;
+  for (const type of ['pointerdown', 'mousedown', 'click']) {
+    addEventListener(type, (e) => {
+      if (e.target && e.target.id === 'game') return;
+      if (type === 'pointerdown') { if (guarded(e)) eatT = e.timeStamp; else { eatT = -1e9; downX = e.clientX; downY = e.clientY; downT = e.timeStamp; } }
+      if (e.timeStamp - eatT < 1500 || (type !== 'pointerdown' && guarded(e))) { e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+  }
+  addEventListener('keydown', () => { eatT = -1e9; }, true);
+  // ATTACK4 L1: Tab walked out of the open board onto the toolbar and buttons behind it (27 Tabs; or 1 after the X /
+  // Save let go of the focus): Enter there acted under the board, the + card threw the unit being edited away. Tab and
+  // Shift+Tab now go round the board's own controls.
+  const focusables = () => [...sheet.querySelectorAll('button, input, [tabindex="0"]')].filter((e) => !e.disabled && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
+  addEventListener('keydown', (e) => {
+    if (!open || e.key !== 'Tab') return;
+    const f = focusables(); if (!f.length) return;
+    const i = f.indexOf(document.activeElement), to = i < 0 ? (e.shiftKey ? f.length - 1 : 0) : !e.shiftKey && i === f.length - 1 ? 0 : e.shiftKey && i === 0 ? f.length - 1 : -1;
+    if (to >= 0) { e.preventDefault(); f[to].focus({ preventScroll: true }); }
+  }, true);
+  function guardTap() { const now = performance.now(); if (now - downT < 1000) { guardFrom = downT; guardUntil = now + T.GUARD_MS; guardX = downX; guardY = downY; } }
 
   // ---- state ----
   let open = false, isNew = true, draft = null, pick = null, armT = 0, armed = false, lay = null, raf = 0, last = 0, t0 = 0;
@@ -337,6 +368,7 @@ export function createMaker(opts) {
 
   function fitWords() {
     fit(wChip.tx); aChips.forEach((c) => fit(c.tx)); fit(hatChip.tx);
+    fit(nameIn); // ATTACK4 L1: a long name (16 W, 16 大) ran under the pencil, its end cut off
     fit(save); fit(del); fit(capName);
     for (const s of grid.querySelectorAll('.mk-ico-txt')) fit(s, 2);
     for (const s of [wChip.ic, ...aChips.map((c) => c.ic)]) for (const x of s.querySelectorAll('.mk-ico-txt')) fit(x, 2);
@@ -344,7 +376,7 @@ export function createMaker(opts) {
 
   // ---- picker ----
   function openPick(kind, slot = 0) {
-    pick = { kind, slot };
+    pick = { kind, slot }; guardTap();
     sheet.classList.add('picking');
     grid.dataset.kind = kind;
     buildPick();
@@ -353,7 +385,7 @@ export function createMaker(opts) {
   }
   function closePick() {
     if (!pick) return;
-    pick = null; sheet.classList.remove('picking'); grid.replaceChildren();
+    pick = null; sheet.classList.remove('picking'); grid.replaceChildren(); guardTap();
     for (let i = stills.length - 1; i >= 0; i--) if (!stills[i].cv.isConnected) stills.splice(i, 1);
     sync();
   }
@@ -477,7 +509,7 @@ export function createMaker(opts) {
     if (onSave) onSave(r, wasNew);
   });
   close.addEventListener('click', (e) => { e.currentTarget.blur(); play(); if (pick) closePick(); else hide(); relabel(); });
-  nameIn.addEventListener('input', () => { draft.name = nameIn.value.slice(0, 16); });
+  nameIn.addEventListener('input', () => { draft.name = nameIn.value.slice(0, 16); fit(nameIn); });
   nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nameIn.blur(); } e.stopPropagation(); });
   nameIn.addEventListener('blur', () => { layout(); });
   // keys inside the board never reach the field's shortcuts (controls.js returns early while the maker is open)
@@ -490,6 +522,7 @@ export function createMaker(opts) {
     pick = null; sheet.classList.remove('picking'); grid.replaceChildren(); disarm();
     nameIn.value = draft.name;
     if (!open) { open = true; back.hidden = false; onOpenChange && onOpenChange(true); }
+    guardTap();
     t0 = performance.now(); lay = null;
     relabel(); layout();
     if (!raf) raf = requestAnimationFrame(loop);
@@ -497,6 +530,7 @@ export function createMaker(opts) {
   }
   function hide() {
     if (!open) return;
+    guardTap();
     open = false; back.hidden = true; pick = null; sheet.classList.remove('picking'); grid.replaceChildren(); disarm(); stills.length = 0; bodyKey = '';
     if (document.activeElement && back.contains(document.activeElement)) document.activeElement.blur();
     if (raf) { cancelAnimationFrame(raf); raf = 0; }

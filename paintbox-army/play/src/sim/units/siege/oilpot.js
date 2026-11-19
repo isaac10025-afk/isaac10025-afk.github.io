@@ -47,6 +47,8 @@ export const POT = Object.freeze({
   splashR: 16,         // units within 16 px (+ their radius / 2) ...
   splashDmg: 8,        // ... take 8 and catch fire
   burn: 5,             // s of burning on whoever is splashed
+  friendGap: 30,       // attack 3 (11-18): won't lob with an own-side unit this close to the aim point (the splash + the lit
+                       // puddle), like OG's grenadier (blast + 8) and our bomber. Pots used to land on their own line
 });
 const LADLE = Object.freeze({
   damage: 6, jitter: 1, reachGap: 8, push: 40, stun: 0.08, cooldown: 0.8, cdJit: 0.3, facing: 0.6, runUnder: 80, circle: 1, memory: 5,
@@ -129,6 +131,10 @@ function pickThrow(world, u, t) {
   return best;
 }
 
+let _fu = null, _fh = false;
+function friendOne(o) { if (o !== _fu && o.hp > 0 && o.faction === _fu.faction) { _fh = true; return true; } }
+function friendNear(world, u, x, y) { _fu = u; _fh = false; world.query(x, y, POT.friendGap, friendOne); _fu = null; return _fh; }
+
 function brain(world, u) {
   const b = u.b;
   if (b.pots <= 0) { act(world, u, 2); meleeBrain(world, u, LADLE); return; }
@@ -142,16 +148,17 @@ function brain(world, u) {
   // the throw: an enemy in reach (behind a wall first)
   let aim = b.aimId >= 0 ? world.unitById(b.aimId) : null;
   if (!aim || !(aim.hp > 0) || (world.tick + u.index) % 15 === 0) { aim = pickThrow(world, u, t); b.aimId = aim ? aim.id : -1; }
-  if (!aim) {
-    if (d < POT.min) { A.setState(u, S.ENGAGE); u.face = Math.atan2(dy, dx); u.goalX = (-dx / d) * D.walkSpeed; u.goalY = (-dy / d) * D.walkSpeed; return; }
-    A.advance(world, u, t, dx, dy, A.hasLos(world, u), D.walkSpeed); return;
-  }
+  // attack 3 (11-18): an enemy in its face (inside the 60 px minimum) gets the ladle. It used to walk backwards away from it
+  // with pots in hand and never swing: anyone faster (a legion, cavalry) or already burning (not worth a pot) chased it
+  // round in circles for good (oilpot v legion 1v1: 0 damage in 60 s).
+  if (d < POT.min) { act(world, u, world.time - b.throwAt < POT.throwPose ? 1 : 0); meleeBrain(world, u, LADLE); return; }
+  if (!aim) { A.advance(world, u, t, dx, dy, A.hasLos(world, u), D.walkSpeed); return; }
   A.setState(u, S.ENGAGE);
   const fl = POT.flightBase + hyp(aim.x - u.x, aim.y - u.y) / POT.flightPer, ax = aim.x + aim.vx * fl, ay = aim.y + aim.vy * fl;
   const a = Math.atan2(ay - u.y, ax - u.x);
   u.face = a;
   A.sidestep(u, t, dx, dy, d, D);
-  if (u.cooldown <= 0 && Math.abs(A.angDiff(u.heading, a)) <= POT.aimTolerance) lob(world, u, ax, ay);
+  if (u.cooldown <= 0 && Math.abs(A.angDiff(u.heading, a)) <= POT.aimTolerance && !friendNear(world, u, ax, ay)) lob(world, u, ax, ay);
 }
 
 const D = registerUnit({

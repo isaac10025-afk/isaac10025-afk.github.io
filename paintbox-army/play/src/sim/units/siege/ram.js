@@ -146,8 +146,13 @@ function brain(world, u) {
   const dx = t.x - u.x, dy = t.y - u.y, d = hyp(dx, dy) || 0.001;
   u.face = Math.atan2(dy, dx);
   headOf(u, _pt);
-  if (hyp(t.x - _pt[0], t.y - _pt[1]) <= RAM.unitR + t.radius + RAM.reachUnit && Math.abs(A.angDiff(u.heading, u.face)) < 0.6) {
+  const hd = hyp(t.x - _pt[0], t.y - _pt[1]);
+  if (hd <= RAM.unitR + t.radius + RAM.reachUnit && Math.abs(A.angDiff(u.heading, u.face)) < 0.6) {
     A.setState(u, S.ENGAGE); A.markEngaged(world, u.group); startRam(world, u);
+    // attack 3 (11-18): the AI starts a blow up to 12 px before the blow can land (it lands 0.55 s later, at the thrust),
+    // but it also stopped rolling: a target standing in that 12 px band (a crewman beside the other ram, a man stepping
+    // back) was rammed at thin air every 1.8 s for good. Keep rolling in until the head reaches it.
+    if (hd > RAM.unitR + t.radius - 2) { u.goalX = (dx / d) * speed; u.goalY = (dy / d) * speed; }
     return;
   }
   A.setState(u, S.ADVANCE);

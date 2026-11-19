@@ -27,6 +27,8 @@ const T = {
   lineR: 18,          // px: everything this close to its path burns ...
   diveDmg: 15,        // ... and takes this much
   lowZ: 20,           // px: it burns things only while this low
+  hitZ: 30,           // px: ... and things up to this high (every low flyer: a drone flies at 22, a seagull at 26; ATTACK3
+                      //     L3: at 20 a drone swarm zapped a phoenix to death, its dives passing under them)
   scan: 480,          // px: looks this far for a crowd to swoop through
   crowdR: 60,         // px: a crowd is counted within this
   lineTries: 6,       // directions tried through the crowd
@@ -39,6 +41,10 @@ const T = {
   eggHp: 120,         // egg hit points
   hatchPose: 0.6,     // s of the hatch pose
   sight: 440,         // px
+  claw: 14,           // ATTACK3 L3 (ours): talons on another high flyer (its dive burns only things low down) ...
+  clawEvery: 0.9,     // ... every 0.9 s ...
+  clawGap: 30,        // ... wheeling round it this far past both bodies between rakes ...
+  clawReach: 16,      // ... in reach within this
 };
 const RUN = 1, EGG = 2, HATCH = 3, APPROACH = 4;   // subState
 const HITS = 48;      // units burned per run (each once)
@@ -56,7 +62,7 @@ function pickLine(w, u) {
     let c = 0;
     for (let j = 0; j < n; j++) {
       const o = LQ[j];
-      if (o.dead || !(o.hp > 0) || o.inside >= 0 || o.z > T.lowZ || o.def.prop) continue;
+      if (o.dead || !(o.hp > 0) || o.inside >= 0 || o.z > T.hitZ || o.def.prop) continue;
       const ox = o.x - cx, oy = o.y - cy, along = ox * ex + oy * ey;
       if (along < -half || along > half) continue;
       if (Math.abs(ox * ey - oy * ex) <= T.lineR + o.radius) c++;
@@ -81,7 +87,7 @@ function startRun(w, u, dx, dy) {
 let _u = null, _w = null;
 function burnOne(o) {
   const u = _u, b = u.b;
-  if (o === u || o.dead || !(o.hp > 0) || o.inside >= 0 || o.z > T.lowZ || o.climb > 0) return;
+  if (o === u || o.dead || !(o.hp > 0) || o.inside >= 0 || o.z > T.hitZ || o.climb > 0) return;
   if (hypot(o.x - u.x, o.y - u.y) > T.lineR + o.radius + u.radius * 0.5) return;
   for (let k = 0; k < b.nh; k++) if (b.hits[k] === o.id) return;
   if (b.nh < HITS) b.hits[b.nh++] = o.id;
@@ -140,12 +146,38 @@ function brain(w, u) {
       const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy);
       if (d < T.diveLen * 0.9) { startRun(w, u, d > 1 ? dx : Math.cos(u.heading), d > 1 ? dy : Math.sin(u.heading)); return; }
     } else if (pickLine(w, u)) { u.subState = APPROACH; b.t0 = now; return; }
-    else b.next = now + 0.5;
+    else {
+      // ATTACK3 L3: no crowd on the ground (a drone swarm, bees, crows): swoop straight through its target when it's a low
+      // flyer in range; the crowd pick counts only units on the ground, so it circled drones until they zapped it dead
+      const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy);
+      if (t.z > 6 && t.z <= T.hitZ && d > 1 && d < T.diveLen * 0.9) { startRun(w, u, dx, dy); return; }
+      b.next = now + 0.5;
+    }
   }
-  if (high(t)) { flyAt(u, t.x, t.y, T.fly); return; }   // another high flyer: just keep near it
+  if (high(t)) { clawFight(w, u, t); return; }   // another high flyer: circle it close and rake it
   circleAround(u, t.x, t.y, T.circleR, T.fly);
 }
 
+// ---- another high flyer (ATTACK3 L3): its dive only burns things low down, and it used to fly AT a high target: two
+// phoenixes (or one and a jetpack / UFO / dragon) met in one spot and hung there, stacked and still, for the rest of the
+// battle. Now it wheels round the flyer and dives at it to rake it with its talons whenever they're ready.
+function clawFight(w, u, t) {
+  const R = u.radius + t.radius, dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
+  u.face = Math.atan2(dy, dx);
+  if (u.cooldown <= 0) {   // talons ready: straight at it
+    flyAt(u, t.x, t.y, T.fly * 1.3);
+    if (d > R + T.clawReach) return;
+    damage(w, t, T.claw, u);
+    u.cooldown = T.clawEvery; u.attack = 1;
+    w.emit('strike', { x: t.x, y: t.y, v: 0.8, type: u.type, id: u.id });
+    return;
+  }
+  // between rakes: wheel round it a little way out, every phoenix the same way round (a pair circles its middle
+  // instead of both sliding off together into the field edge)
+  const want = R + T.clawGap, m = Math.max(-T.fly, Math.min(T.fly, 2.5 * (d - want)));
+  let vx = -dy / d * T.fly + dx / d * m, vy = dx / d * T.fly + dy / d * m;
+  const v = hypot(vx, vy) || 0.001; u.goalX = vx * T.fly / v; u.goalY = vy * T.fly / v;
+}
 // ---- egg (5 s, then it hatches at full hp)
 function egg(w, u) {
   const b = u.b, now = w.time;

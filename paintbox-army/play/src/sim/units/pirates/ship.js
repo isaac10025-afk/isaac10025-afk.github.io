@@ -184,7 +184,10 @@ const D = registerUnit({
   morale: MACHINE_MORALE,
   look: { attack: { time: 0.4 } },
   weapon: { range: T.broadside.range }, // for possess (aim reach) and readers
-  placeOk(world, x, y) { return shore(world, x, y) >= T.placeShore; },
+  // attack 3 (11-18): not on frozen water either. The lake map is a frozen lake (288 of its 330 deep spots are ice): a ship
+  // painted there sat in the ice, and the "under the ice" rule (conceal.js, for piranhas) hid it from everyone, both ways:
+  // ships on the lake never saw or fought each other
+  placeOk(world, x, y) { return shore(world, x, y) >= T.placeShore && !world.frozenAt(x, y); },
   init(world, u) {
     initB(u); u.plagueFree = 1;
     const b = u.b;
@@ -255,6 +258,18 @@ function sinkGuard(world) {
   }
 }
 registerSystem('pirates-ship-sink', sinkGuard, 'water');
+// After conceal (attack 3): a ship sits ON the water, so ice frozen round it (the ice brush) doesn't hide it like a piranha
+// under the ice; a sinking ship keeps its own hide (startSink).
+function shipSeen(world) {
+  if (!(world.waterCells > 0)) return;
+  const us = world.units;
+  for (let i = 0; i < us.length; i++) {
+    const u = us[i];
+    if (u.def !== D || u.dead || u.b.sinking || !(u.unseen > 0) || u.hidden > 0) continue;
+    if (world.frozenAt(u.x, u.y)) { u.unseen = 0; u.unseenBySeers = 0; }
+  }
+}
+registerSystem('pirates-ship-seen', shipSeen, 'conceal');
 
 export default D;
 export { T };

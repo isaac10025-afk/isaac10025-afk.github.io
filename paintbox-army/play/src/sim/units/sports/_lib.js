@@ -96,6 +96,23 @@ export function mayAct(world, u) { return u.possessed !== 1 || attackHeld(world)
 export function losClear(world, u) { return u.los === 1 || u.los === true || world.walls.count === 0; }
 function markEngaged(world, u) { const g = u.group; if (g >= 0 && world.groups.markEngaged) world.groups.markEngaged(g); }
 /**
+ * Stepping-in speed inside the melee band (W.close, default walk × 0.6). ATTACK3 L3: a foe moving away is followed at
+ * its own pace + a little (up to run speed), and (meleeFight) without the strafe and the step back after each blow: at
+ * walk × 0.6, strafing, a tackler / teleporter / shrink ray stayed 20 px behind a running rifleman for the rest of the
+ * battle, never quite in reach.
+ */
+export function closeSpeed(u, t, W, dx, dy, d) {
+  const cs = W.close !== undefined ? W.close : u.def.walkSpeed * 0.6, away = (t.vx * dx + t.vy * dy) / d;
+  return away > 0 && chases(u, W) ? Math.min(u.def.runSpeed, Math.max(cs, away + CHASE_GAIN)) : cs;
+}
+/** Does this blow go after a runner? Melee fighters do; a ranged unit's close-in blow doesn't (it shoots instead), nor
+ *  W.chase false (the cheerleader's slap: she stays behind the front); W.chase true opts a ranged unit in. */
+function chases(u, W) { return W.chase !== undefined ? W.chase : u.def.melee === true; }
+const CHASE_GAIN = 20;   // px/s faster than a foe moving away (ATTACK3 L3)
+const RUNNER = 60;       // px/s: a foe moving away faster than this is a runner: no strafing or stepping back after it
+/** Is t moving away from u faster than RUNNER (fleeing, backing off at a run)? (ATTACK3 L3) */
+function running(t, dx, dy, d) { return (t.vx * dx + t.vy * dy) / d > RUNNER; }
+/**
  * meleeFight(world, u, t, W, dx, dy, d) → 0 out of reach, 1 engaged, 2 struck this tick.
  * W: {damage, damageJitter, push, stun, cooldown, cooldownJitter, reach (gap past both radii), band, facing, circle,
  *     backStep (default true), close (px/s stepping in, default walk × 0.6)}. W.strike(world, u, t) replaces the plain blow.
@@ -107,8 +124,11 @@ export function meleeFight(world, u, t, W, dx, dy, d) {
   const a = Math.atan2(dy, dx), def = u.def;
   u.face = a;
   let r = 1;
-  if (d > reach) { const cs = W.close !== undefined ? W.close : def.walkSpeed * 0.6; u.goalX = (dx / d) * cs; u.goalY = (dy / d) * cs; }
+  if (d > reach) { const cs = closeSpeed(u, t, W, dx, dy, d); u.goalX = (dx / d) * cs; u.goalY = (dy / d) * cs; }
   else if (u.cooldown <= 0 && Math.abs(angleDiff(u.heading, a)) < W.facing) { if (W.strike) W.strike(world, u, t); else meleeStrike(world, u, t, W); r = 2; }
+  // ATTACK3 L3: after a runner: straight after it, as a charge (no strafing, no step back, and no pull back to its
+  // painted spot: Engage keeps 0.3 of the formation pull, which held a chaser to the runner's pace)
+  if (chases(u, W) && running(t, dx, dy, d)) { setState(u, STATE.CHARGE); return r; }
   circle(world, u, t, dx, dy, d, def, W.circle, W.backStep !== false);
   oddsApproach(world, u, t, dx, dy, d, def);
   return r;

@@ -1,7 +1,8 @@
 // gravity (OURS, Space tab): wraps one enemy at a time in a bubble (range 200; mass ≤ 8, not flying, not a boss): it
 // floats 2.5 s (`u.floating`: stunned, drifting at FLOAT_Z, steering.js), then drops HARD: 20 + 5 × mass (max 60), and
 // whoever it lands on takes 15 + is knocked down (_lib.js floatHard + the dinos' landing record). Over water: a splash.
-// Cooldown 3.5 s. Keeps its distance between casts; slaps (5) whoever comes close. Owner: SPACE-SIM.
+// Cooldown 3.5 s. Keeps its distance between casts; slaps (5) whoever comes close, and goes in to slap when nobody about
+// can be floated (b.k = 1: its last look found none; ATTACK3 L3). Owner: SPACE-SIM.
 // Pose codes (STEP6.md): b.act 1 cast → `cast` (hands up while the bubble holds; b.victim = the floating unit).
 // Bubble = effect projectile `bubble` riding on the victim: p.r = victim radius, p.life / p.maxLife count the float down.
 import {
@@ -25,7 +26,7 @@ const T = {
   band: 40,
   slap: {
     damage: 5, damageJitter: 1, cooldown: 0.7, cooldownJitter: 0.2, push: 70, stun: 0.1,
-    reach: 5, band: 8, facing: 0.7, circle: 0.3, backStep: true,
+    reach: 5, band: 8, facing: 0.7, circle: 0.3, backStep: true, chase: true,   // ATTACK3 L3: in close, it follows a runner (meleeFight)
   },
 };
 
@@ -77,14 +78,16 @@ function brain(w, u) {
   if (now >= b.next) {
     let m = null;
     if (t && floatable(w, t) && hypot(t.x - u.x, t.y - u.y) <= T.range && clearLine(w, u)) m = t;
-    else if (u.possessed !== 1 && (w.tick + u.index) % T.scanEvery === 0) m = findMark(w, u, u.x, u.y, T.range);
-    if (m) { setState(u, STATE.ENGAGE); cast(w, u, m); return; }
+    else if (u.possessed !== 1 && (w.tick + u.index) % T.scanEvery === 0) { m = findMark(w, u, u.x, u.y, T.range); b.k = m ? 0 : 1; }
+    if (m) { b.k = 0; setState(u, STATE.ENGAGE); cast(w, u, m); return; }
   }
   if (b.act === 1) { const v = unitOf(w, b.victim); if (v) u.face = Math.atan2(v.y - u.y, v.x - u.x); }
   if (!t) { idle(w, u); return; }
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
   if (meleeFight(w, u, t, T.slap, dx, dy, d) !== 0) return;
-  if (u.possessed === 1 || !clearLine(w, u) || d > T.range) { closeOn(w, u, t, dx, dy, d); return; }
+  // ATTACK3 L3: bubble ready but nobody it can float about (its last look found none: giants, bosses, flyers): go in and
+  // slap. Keeping its distance then meant a gravity alien and a giant walked across the field together all battle
+  if (u.possessed === 1 || !clearLine(w, u) || d > T.range || (now >= b.next && b.k === 1)) { closeOn(w, u, t, dx, dy, d); return; }
   keepAt(w, u, t, dx, dy, d, T.want, T.band);
 }
 

@@ -12,6 +12,8 @@ const T = {
   run: 120, // px/s (STEP6)
   min: 60, // px: closest bowl (STEP6)
   max: 300, // px: farthest bowl (STEP6)
+  backMax: 1.2, // s: backs off this long for room to bowl, then goes in to bonk (ATTACK3 L3)
+  backGap: 20, // px past `min`: room again, the backing clock resets
   aimTime: 0.4, // s aiming (b.act 1)
   bowlPose: 0.3, // s of the `bowl` pose (b.act 2)
   reload: 3, // s between balls (STEP6)
@@ -138,7 +140,7 @@ const D = athlete({
   brushSpacing: 22,
   look: { attack: { time: 0.35 } },
   weapon: { ...T.bonk, range: T.max }, // possess aim reach
-  init(world, u) { initB(u); const b = u.b; b.aimX = u.x; b.aimY = u.y; u.cooldown = world.rng() * T.reload * 0.5; },
+  init(world, u) { initB(u); const b = u.b; b.aimX = u.x; b.aimY = u.y; b.backT = -1; u.cooldown = world.rng() * T.reload * 0.5; },
   brain(world, u) {
     const b = u.b;
     if (b.act === 2 && actAge(world, u) >= T.bowlPose) setAct(world, u, 0);
@@ -151,7 +153,15 @@ const D = athlete({
     if (b.act !== 1 && meleeFight(world, u, t, T.bonk, dx, dy, d)) return;   // someone in his face: bonk
     if (b.act !== 1) {
       if (!clear || d > T.max) { advanceTo(world, u, t, dx, dy, clear, u.def.walkSpeed); return; }
-      if (d < T.min) { setState(u, STATE.ALERT); u.face = Math.atan2(dy, dx); u.goalX = (-dx / d) * u.def.walkSpeed; u.goalY = (-dy / d) * u.def.walkSpeed; return; }
+      // too close to bowl: back off for room, but only so long (ATTACK3 L3): a legionary at his heels kept pace with him,
+      // so he backed across the whole field and never bowled or bonked again. Still too close after that: he turns and
+      // goes in with the bonk.
+      if (d < T.min) {
+        if (b.backT < 0) b.backT = world.time;
+        if (world.time - b.backT < T.backMax) { setState(u, STATE.ALERT); u.face = Math.atan2(dy, dx); u.goalX = (-dx / d) * u.def.walkSpeed; u.goalY = (-dy / d) * u.def.walkSpeed; return; }
+        advanceTo(world, u, t, dx, dy, clear, u.def.walkSpeed); return;
+      }
+      if (d > T.min + T.backGap) b.backT = -1;
     }
     setState(u, STATE.ENGAGE);
     const lead = d / B.avgSpeed, aim = Math.atan2(dy + t.vy * lead, dx + t.vx * lead);

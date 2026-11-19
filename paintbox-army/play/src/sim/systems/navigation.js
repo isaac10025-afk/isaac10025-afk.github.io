@@ -14,6 +14,7 @@ export class Nav {
     this.ready = new Uint8Array(FACTION_COUNT); this.readyCareful = new Uint8Array(FACTION_COUNT);
     this.wallsVersion = -1; this.minesVersion = -1; this.hasWalls = false; this.hasCareful = false;
     this.lavaKey = -1; // STEP7 TERRAIN-SIM: lava (+ planks over it) the fields were built with (-1 none)
+    this.walls = null; // OURS (attack 3): the walls the cells were built from (direction() checks a step out of a walled cell)
     this.heapCell = new Int32Array(1); this.heapKey = new Float32Array(1); this.heapSize = 0;
   }
   resize(W, H) {
@@ -29,6 +30,7 @@ export class Nav {
   // (OG game.js:2491-2517). nearWall/nearMined = 8-neighbourhood dilation (OG game.js:2646-2652).
   syncWalls(walls, mines, world = null, lava = null) { // STEP7 TERRAIN-SIM: world + lava (terrain/lava.js Lava7) or null
     const { cols, rows, blocked, mined } = this;
+    this.walls = walls;
     blocked.fill(0);
     for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
       let b = 0;
@@ -92,12 +94,19 @@ export class Nav {
     }
   }
   // Unit direction toward the lowest neighbour; false when no field / no way (OG game.js:2581-2606).
+  // OURS (attack 3, 11-18): a unit standing in a walled cell (any wall tile in its 24 px cell) next to a wall one or two
+  // tiles thick (the step-7 maps' fences, walls and gates; a thin painted wall) could be sent to the neighbour cell on the
+  // FAR side of that wall: its own cell is blocked (no distance), the cell beyond is open and nearer the enemy, so the
+  // unit walked into the wall for good (village: a legion pressed against the enclosure wall, charging, until the battle
+  // ended). OG does the same, but OG's painted walls are rarely that thin. Fix: from a walled cell, a neighbour whose
+  // centre the unit can't see in a straight line is skipped (if every open neighbour is behind a wall, OG's pick stands).
   direction(faction, x, y, out, careful = false) {
     if (careful) careful = this.hasCareful;
     if ((careful ? this.readyCareful[faction] : this.ready[faction]) === 0) return false;
     const { cols, rows } = this, d = careful ? this.careful[faction] : this.dist[faction], blk = careful ? this.mined : this.blocked, inv = 1 / this.cell;
     const cx = Math.min(cols - 1, Math.max(0, Math.floor(x * inv))), cy = Math.min(rows - 1, Math.max(0, Math.floor(y * inv)));
-    let best = d[cy * cols + cx], bx = -1, by = -1;
+    const walled = this.blocked[cy * cols + cx] === 1 && this.walls !== null && this.walls.count > 0, C = this.cell;
+    let best = d[cy * cols + cx], bx = -1, by = -1, seen = best, sx = -1, sy = -1;
     for (let dy = -1; dy <= 1; dy++) {
       const yy = cy + dy; if (yy < 0 || yy >= rows) continue;
       for (let dx = -1; dx <= 1; dx++) {
@@ -106,8 +115,10 @@ export class Nav {
         const v = yy * cols + xx;
         if (blk[v] === 1 || (dx !== 0 && dy !== 0 && (blk[cy * cols + xx] === 1 || blk[yy * cols + cx] === 1))) continue;
         if (d[v] < best) { best = d[v]; bx = xx; by = yy; }
+        if (walled && d[v] < seen && this.walls.lineOfSight(x, y, (xx + 0.5) * C, (yy + 0.5) * C)) { seen = d[v]; sx = xx; sy = yy; } // OURS (above)
       }
     }
+    if (walled && sx >= 0 && seen !== Infinity) { best = seen; bx = sx; by = sy; }
     if (bx < 0 || best === Infinity) return false;
     const ax = (bx + 0.5) * this.cell - x, ay = (by + 0.5) * this.cell - y, m = Math.sqrt(ax * ax + ay * ay) || 1;
     out[0] = ax / m; out[1] = ay / m; return true;

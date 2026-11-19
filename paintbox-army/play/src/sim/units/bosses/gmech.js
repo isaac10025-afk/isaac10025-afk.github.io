@@ -57,6 +57,10 @@ const T = {
   dieDmg: 200,                      // ... and damage when it blows
   firstMissile: 1.5,                // s after it is placed before its first salvo
   firstLaser: 3,                    // s after it is placed before its first sweep
+  swatReach: 30,                    // ATTACK3 L3 (ours): a low flyer (drone, bee, ghost) this close past both bodies ...
+  swat: 60,                         // ... is swatted by its arm for this much ...
+  swatEvery: 1.4,                   // ... every 1.4 s (stomps miss flyers, missiles want 200 px, the laser starts in front of
+                                    //     its chest: a drone at its head zapped it for the rest of the battle)
 };
 const MISSILE_BLAST = registerBlast('gmech_missile', { radius: T.missileBlast, damage: T.missileDmg, minFalloff: 0.3, push: 150, stun: 0.3, noiseRadius: 320, hatChance: 0.4 });
 const DIE_BLAST = registerBlast('gmech_wreck', { radius: T.dieBlast, damage: T.dieDmg, minFalloff: 0.2, push: 400, stun: 0.8, tossUp: 260, tossSpeed: 260, tossFrom: 0.4, noiseRadius: 700, hatChance: 0.8 });
@@ -176,6 +180,23 @@ function stompStep(w, u) {
 }
 
 // ---------------------------------------------------------------- brain
+// A low flyer buzzing round its head (in the air, but not high: melee reaches it, STEP6) gets swatted (ATTACK3 L3).
+const SWQ = new Array(48);
+function swat(w, u) {
+  const R = u.radius + T.swatReach * u.shrink;
+  const n = w.queryMask(u.x, u.y, R + BOSS.MARGIN, ENEMY[u.faction], SWQ, SWQ.length);
+  let v = null, bd = Infinity;
+  for (let k = 0; k < n; k++) {
+    const o = SWQ[k]; SWQ[k] = null;
+    if (!hittable(u, o) || o.def.prop || grounded(o) || high(o) || o.inside >= 0) continue;
+    const d = hypot(o.x - u.x, o.y - u.y) - o.radius;
+    if (d <= R && d < bd) { bd = d; v = o; }
+  }
+  if (!v) return;
+  damage(w, v, T.swat, u);
+  u.b.swatT = w.time + T.swatEvery; u.attack = 1;
+  w.emit('strike', { x: v.x, y: v.y, v: 1.5, type: u.type });
+}
 function brain(w, u) {
   const b = u.b, now = w.time;
   shrug(w, u);
@@ -186,6 +207,7 @@ function brain(w, u) {
   if (b.act === LASER) { laserStep(w, u); setState(u, STATE.ENGAGE); return; }
   if (b.act === STOMP) { stompStep(w, u); u.face = u.heading; setState(u, STATE.ENGAGE); return; }
   const t = targetOf(w, u);
+  if (now >= b.swatT && canAuto(w, u)) swat(w, u);
   if (now >= b.next3 && canAuto(w, u) && enemyClose(w, u, T.stompTrigger)) { startStomp(w, u); return; }
   if (!t) { idle(w, u); return; }
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001, a = Math.atan2(dy, dx);
@@ -227,7 +249,7 @@ const D = boss({
     initBag(u);
     const b = u.b;
     b.beamA = 0; b.beamL = 0; b.dying = 0; b.k = T.missiles;
-    b.next = w.time + T.firstMissile; b.next2 = w.time + T.firstLaser; b.next3 = w.time;
+    b.next = w.time + T.firstMissile; b.next2 = w.time + T.firstLaser; b.next3 = w.time; b.swatT = w.time;
     b.kBy = -1; b.kType = null; b.kFac = -1; b.kAt = 0; b.kCause = 0;
   },
   damageMul(w, u) { return u.b.dying ? 0 : 1; },

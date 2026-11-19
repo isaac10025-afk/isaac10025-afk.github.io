@@ -122,7 +122,7 @@ function shrinkZap(w, u, t, dx, dy, d, bag) {   // the zap for whoever comes clo
 registerWeapon({
   id: 'shrink', range: ST.range,
   def: { weapon: { range: ST.range }, look: { attack: { time: SHR.pose } } },
-  init(w, u, bag) { bag.next = w.time + ST.reload * 0.5 * w.rng(); bag.prey = -1; bag.aiming = 0; bag.t0 = 0; bag.zap = scaledMelee(ST.zap, u, power(u)); },
+  init(w, u, bag) { bag.next = w.time + ST.reload * 0.5 * w.rng(); bag.prey = -1; bag.aiming = 0; bag.t0 = 0; bag.none = 0; bag.zap = scaledMelee(ST.zap, u, power(u)); },
   tick(w, u, bag) {
     poseFor(w, u, ACT.FIRE, ST.firePose);
     if (bag.aiming && (u.stun > 0 || u.state === STATE.FLEE)) { bag.aiming = 0; unpose(w, u, ACT.AIM); }
@@ -132,7 +132,7 @@ registerWeapon({
     const now = w.time, R = ST.range + edge(u, SHR.srcR), ready = now >= bag.next;
     let m = bag.prey >= 0 ? w.unitById(bag.prey) : null;
     if (u.possessed === 1) m = shrinkable(t) ? t : null;   // the player picks the mark
-    else if (ready && !bag.aiming && (w.tick + u.index) % ST.scanEvery === 0) m = findMark(w, u, R);
+    else if (ready && !bag.aiming && (w.tick + u.index) % ST.scanEvery === 0) { m = findMark(w, u, R); bag.none = m ? 0 : 1; }
     if (m && (!shrinkable(m) || hypot(m.x - u.x, m.y - u.y) > R * 1.15)) m = null;
     bag.prey = m ? m.id : -1;
     if (ready && m) {   // aim, then fire
@@ -146,6 +146,10 @@ registerWeapon({
     if (bag.aiming) { bag.aiming = 0; unpose(w, u, ACT.AIM); }
     if (shrinkZap(w, u, t, dx, dy, d, bag) !== 0) return;
     if (u.possessed === 1 || !clearLos(w, u) || d > R) { hunt(w, u, t, d < 140 ? u.def.runSpeed : u.def.walkSpeed, d < 140 ? STATE.CHARGE : STATE.ADVANCE); return; }
+    // ATTACK3 L4 (OURS): everyone in range already shrunk -> go and zap them. The source alien keeps its distance and waits
+    // (it fights in an army); a made unit's shrink ray is its only weapon: it stood 200 px off doing nothing while three
+    // shrunk riflemen shot it to death. A new full-size enemy in range turns the ray back on (next scan).
+    if (bag.none === 1) { hunt(w, u, t, u.def.runSpeed, STATE.CHARGE); return; }
     keepAt(w, u, t, dx, dy, d, ST.want + edge(u, SHR.srcR), ST.band);
   },
   // possessed, attack held at nobody: a ring toward the aim (it shrinks whatever it touches first), else a zap

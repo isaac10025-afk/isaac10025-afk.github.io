@@ -8,7 +8,7 @@
 // projectile per tick while a dome is up, nothing at all otherwise. Enemy laser beams (laser bot) stop at the dome too.
 // b.act: 1 dome up → `dome` (antenna glows). The dome = effect projectile `dome` following the bot: p.r radius (px),
 // p.k dome hp 0..1, p.hitAt world.time of the last block (flash).
-import { robot, initB, setAct, begin, targetOf, idle, keepRange, melee, emptySwing, losClear, hittable, ownerOf, hypot, STATE, DT, CB, ENEMY, moveTo, setState, ROBOT } from './_lib.js';
+import { robot, initB, setAct, begin, targetOf, idle, closeOn, melee, emptySwing, losClear, hittable, ownerOf, hypot, STATE, DT, CB, ENEMY, moveTo, setState, ROBOT } from './_lib.js';
 import { groupPoint } from '../../systems/navigation.js';
 import { registerProjectileKind, spawnProjectile, removeProjectile } from '../../combat/projectiles.js';
 import { DOME } from '../../combat/ballistics.js';
@@ -34,7 +34,6 @@ const T = {
   allyR: 220, // px: looks this far for an ally to cover
   allyEvery: 15, // ticks between ally / spot picks
   arrive: 6, // px from the spot = there
-  alone: [100, 160], // px: with nobody to cover, it holds this far from its target
   zap: {
     damage: 6, // melee zap
     damageJitter: 1, // ±
@@ -163,12 +162,14 @@ function domeTick(world, u) {
 
 // ---------------------------------------------------------------- the spot behind an ally
 let _su = null, _sb = null, _sbd = 0, _sbr = 0;
-// nearest ally, preferring anyone but another shield bot (shield bots alone would chain behind each other)
+// nearest ally that isn't another shield bot. attack 3 (11-18): shield bots used to cover each other when nobody else was
+// there, each stepping 60 px behind the next, away from the enemy: a shield bot army backed off for good and never fought
+// (27 v 1 rifleman: no damage either way in 60 s). Now with only shield bots about they go in and zap (below).
 function allyOne(o) {
-  if (o === _su || o.dead || !(o.hp > 0) || o.def.prop || o.inside >= 0) return;
-  const rank = o.type === 'shieldbot' ? 1 : 0, d = hypot(o.x - _su.x, o.y - _su.y);
-  if (_sb && (rank > _sbr || (rank === _sbr && d >= _sbd))) return;
-  _sb = o; _sbd = d; _sbr = rank;
+  if (o === _su || o.dead || !(o.hp > 0) || o.def.prop || o.inside >= 0 || o.type === 'shieldbot') return;
+  const d = hypot(o.x - _su.x, o.y - _su.y);
+  if (_sb && d >= _sbd) return;
+  _sb = o; _sbd = d; _sbr = 0;
 }
 function nearestAlly(world, u) {
   _su = u; _sb = null; _sbd = Infinity; _sbr = 0;
@@ -198,7 +199,8 @@ function brain(world, u) {
   } else if (u.possessed === 1 || !groupPoint(world, u, null, ROBOT.memory, _ep)) { b.ally = -1; idle(world, u); return; }
   else { b.ex = _ep[0]; b.ey = _ep[1]; }                // no target: the group's fight is the enemy side
   if ((world.tick + u.index) % T.allyEvery === 0 || b.ally < 0) pickSpot(world, u, b.ex, b.ey);
-  if (b.ally < 0) { if (t) keepRange(world, u, t, t.x - u.x, t.y - u.y, hypot(t.x - u.x, t.y - u.y) || 0.001, T.alone[0], T.alone[1]); else idle(world, u); return; }
+  // nobody to cover: it walks in under its dome and zaps (attack 3: it used to hold 100-160 px off its target for good)
+  if (b.ally < 0) { if (t) { const dx = t.x - u.x, dy = t.y - u.y; closeOn(world, u, t, dx, dy, hypot(dx, dy) < 200 ? T.run : T.walk); } else idle(world, u); return; }
   const sx = b.sx - u.x, sy = b.sy - u.y, s = hypot(sx, sy);
   setState(u, s > 40 ? STATE.ADVANCE : STATE.ENGAGE);
   if (s > T.arrive) moveTo(world, u, b.sx, b.sy, s > 80 ? T.run : Math.min(T.walk, 3 * s), losClear(world, u) || world.lineOfSight(u.x, u.y, b.sx, b.sy));

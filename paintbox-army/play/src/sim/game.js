@@ -49,10 +49,16 @@ class Painter {
         if (s > best) { best = s; bx = px; by = py; if (s >= clear * clear) break; }
       }
       if (best < 0) continue;                                                           // OG game.js:7078
+      if (w.paintCap === 0) break;                                                      // STEP9 LEAD: campaign box count reached
       const h = (face !== null ? face : this.heading) + 0.3 * (rng() - rng());               // OG game.js:7079
       const team = w.teamMode ? w.teamAt(bx) : -1;
+      const cost = budgetCost(w, this.type, team);                                      // STEP9 LEAD: campaign budget
+      if (cost < 0) { if (cost === OUT) break; continue; }
+      const id0 = w.nextId;
       const u = w.spawn(this.type, bx, by, { group: this.groupAt(bx), heading: h, team });
       if (!u) break;                                                                    // cap reached (OG game.js:7081)
+      if (w.budget) budgetPaid(w, u, cost, id0);
+      if (w.paintCap > 0) w.paintCap--;
       placed++;
       if (def.faceStroke) { if (face === null) this.unturned.push(u); else def.faceStroke(w, u); }
       this.pending.push(u);
@@ -78,7 +84,13 @@ class Painter {
     const r = this.def.radius, px = clamp(x, r, w.W - r), py = clamp(y, r, w.H - r);
     if (w.walls.isSolidAt(px, py)) return 0;
     if (this.def.placeOk && !this.def.placeOk(w, px, py)) return 0;                 // OURS (step 4)
-    return w.spawn(this.type, px, py, { group: this.groupAt(px), heading: this.heading, team: w.teamMode ? w.teamAt(px) : -1 }) ? 1 : 0;
+    const team = w.teamMode ? w.teamAt(px) : -1, cost = budgetCost(w, this.type, team);   // STEP9 LEAD: campaign budget
+    if (cost < 0 || w.paintCap === 0) return 0;
+    const id0 = w.nextId;
+    const u = w.spawn(this.type, px, py, { group: this.groupAt(px), heading: this.heading, team });
+    if (u && w.budget) budgetPaid(w, u, cost, id0);
+    if (u && w.paintCap > 0) w.paintCap--;
+    return u ? 1 : 0;
   }
   // Team mode: crossing the midline opens a second group for the other team (OG game.js:7120-7127).
   groupAt(x) {
@@ -100,6 +112,25 @@ class Painter {
   }
 }
 
+// ---- STEP9 LEAD (campaign, STEP9.md): the paint budget. world.budget = null in the sandbox (nothing below runs).
+// { team, total, spent, price(type), paid: Map(id -> price), kids: Map(id -> [ids]), locked, out }
+// Only `team`'s half can be painted, only before START (locked), and a stroke stops at the first unit it can't pay for.
+const OUT = -2, SKIP = -1;
+function budgetCost(w, type, team) {
+  const B = w.budget; if (!B) return 0;
+  if (B.locked || team !== B.team) return SKIP;
+  const c = B.price(type);
+  if (!(c >= 0)) return SKIP;                       // no price = not for sale here
+  if (B.spent + c > B.total + 1e-9) { if (!B.out) { B.out = true; w.emit('budgetOut', { team, type }); } return OUT; }
+  return c;
+}
+// Units a painted unit spawns while it is placed (a cannon's crew, a cavalry rider) are its kids: erased with it.
+function budgetPaid(w, u, cost, id0) {
+  const B = w.budget;
+  B.spent += cost; B.paid.set(u.id, cost);
+  if (w.nextId > id0 + 1) { const k = []; for (let id = id0; id < w.nextId; id++) if (id !== u.id) k.push(id); B.kids.set(u.id, k); }
+}
+
 // Stroke heading: team side, else toward the centroid of this type's enemies, else random for Wild, else up (OG game.js:7717-7722).
 function strokeHeading(w, type, x, y) {
   const def = getDef(type);
@@ -116,18 +147,27 @@ export function createGame({ W = 800, H = 600, seed = 1, march = false } = {}) {
   let mapId = null, mapSecret = true;   // OURS (step 7, STEP7.md): the loaded map; Clear rebuilds it
 
   const record = reportM && reportM.BattleRecord ? new reportM.BattleRecord() : null;
-  function watch() { return record ? record.watch(world) : ''; } // end-of-battle watch (OG watchRound game.js:8271-8289)
+  let lastResult = '';   // STEP9 LEAD: the watch's last answer (campaign outcome reads it without watching twice)
+  function watch() { lastResult = record ? record.watch(world) : ''; return lastResult; } // end-of-battle watch (OG watchRound game.js:8271-8289)
   function eraseCircle(x, y, r) { // remove every unit within r; they leave their group (OG game.js:5617-5627)
     world.syncGrid();
-    const hit = [];
-    world.query(x, y, r, (u) => { hit.push(u); });
-    for (const u of hit) { if (u.group >= 0) world.groups.leave(u.group); world.remove(u); }
+    const hit = [], B = world.budget;
+    world.query(x, y, r, (u) => { if (!B || canErase(B, u)) hit.push(u); });
+    if (B) for (let i = 0, n = hit.length; i < n; i++) { const k = B.kids.get(hit[i].id); if (k) for (const id of k) { const c = world.unitById(id); if (c && !c.dead && !hit.includes(c)) hit.push(c); } }
+    for (const u of hit) {
+      if (u.dead) continue;
+      if (B && B.paid.has(u.id)) { B.spent = Math.max(0, B.spent - B.paid.get(u.id)); B.paid.delete(u.id); B.kids.delete(u.id); B.out = false; }   // STEP9 LEAD: refund
+      if (u.group >= 0) world.groups.leave(u.group); world.remove(u);
+    }
     return hit.length;
   }
+  // STEP9 LEAD: in a campaign battle the eraser only takes the player's own units, and only before START
+  function canErase(B, u) { return !B.locked && !u.dead && u.team === B.team; }
   // Erase along a drag: terrain under the brush, then units every max(2, r/2) px (OG game.js:7708-7716).
   function eraseSegment(x0, y0, x1, y1, first = false) {
     const r = brushRadius;
-    if (terrainM) { if (first && terrainM.beginErase) terrainM.beginErase(world, x0, y0, r); else if (terrainM.eraseTerrain) terrainM.eraseTerrain(world, x0, y0, x1, y1, r); }
+    if (terrainM && !world.budget) { // STEP9 LEAD: !world.budget = a campaign battle's terrain is the level's, never erased
+      if (first && terrainM.beginErase) terrainM.beginErase(world, x0, y0, r); else if (terrainM.eraseTerrain) terrainM.eraseTerrain(world, x0, y0, x1, y1, r); }
     const steps = Math.max(1, Math.ceil(hypot(x1 - x0, y1 - y0) / Math.max(2, 0.5 * r)));
     let n = 0;
     for (let c = 1; c <= steps; c++) n += eraseCircle(x0 + ((x1 - x0) * c) / steps, y0 + ((y1 - y0) * c) / steps, r);
@@ -135,7 +175,7 @@ export function createGame({ W = 800, H = 600, seed = 1, march = false } = {}) {
   }
   // Terrain tools; terrain/index.js applies the wall ×0.75 brush (OG game.js:7552) and the water stroke id.
   function terrainPaint(kind, x0, y0, x1, y1, first = false) {
-    if (!terrainM) return 0;
+    if (!terrainM || world.budget) return 0;   // STEP9 LEAD: no terrain painting in a campaign battle
     if (first && terrainM.beginTerrainStroke) return terrainM.beginTerrainStroke(world, kind, x0, y0, brushRadius);
     return terrainM.paintTerrain ? terrainM.paintTerrain(world, kind, x0, y0, x1, y1, brushRadius) : 0;
   }
@@ -157,6 +197,7 @@ export function createGame({ W = 800, H = 600, seed = 1, march = false } = {}) {
     setBrushRadius(r) { brushRadius = clamp(r, BRUSH_MIN, BRUSH_MAX); },
     paintBegin(x, y) {
       endStroke(); lastX = x; lastY = y; world.lastPaintAt = world.time;   // OURS: a stroke resets the march clock (PLAN H)
+      if (world.budget) world.budget.out = false;   // STEP9 LEAD: 'budgetOut' once per stroke (UI ask)
       if (tool.kind === 'erase') { mode = 'erase'; return eraseSegment(x, y, x, y, true); }
       if (tool.kind !== 'unit') { mode = tool.kind; return terrainPaint(tool.kind, x, y, x, y, true); }
       const def = getDef(tool.type); if (!def) return 0;
@@ -188,7 +229,34 @@ export function createGame({ W = 800, H = 600, seed = 1, march = false } = {}) {
       world.map = null;
       if (mapId && mapsM) mapsM.buildMap(world, mapId, { secret: mapSecret });   // OURS (step 7): Clear = the fresh map again
       if (world.teamMode) world.holding = true;
+      const B = world.budget; if (B) { B.spent = 0; B.paid.clear(); B.kids.clear(); B.locked = false; B.out = false; B.startTime = -1; }   // STEP9 LEAD
     },
+    // ---- share codes (OURS, Part 2 step 10, sim/share.js): one unit at an exact place, as the brush would place it ----
+    /** opts { heading, team (Team battle: 0 | 1, default the half it is on), group (-1 none) }. Same rules as a brush
+     *  dab: a boss once per field, def.placeOk (water-only units), a campaign budget (your half, before START, paid).
+     *  Returns the unit or null. */
+    place(type, x, y, opts = {}) {
+      const def = getDef(type); if (!def) return null;
+      const w = world, px = clamp(x, def.radius, w.W - def.radius), py = clamp(y, def.radius, w.H - def.radius);
+      if (def.boss) for (const u of w.units) if (!u.dead && u.type === type) return null;
+      if (def.placeOk && !def.placeOk(w, px, py)) return null;
+      const team = !w.teamMode ? -1 : w.budget ? w.teamAt(px) : opts.team === 0 || opts.team === 1 ? opts.team : w.teamAt(px);
+      const cost = budgetCost(w, type, team); if (cost < 0) return null;
+      const id0 = w.nextId;
+      const u = w.spawn(type, px, py, { group: opts.group ?? -1, heading: opts.heading || 0, team });
+      if (u && w.budget) budgetPaid(w, u, cost, id0);
+      if (u && def.faceStroke) def.faceStroke(w, u);
+      return u;
+    },
+    // ---- campaign paint budget (OURS, Part 2 step 9, STEP9.md; sim/campaign/index.js drives it) ----
+    /** spec { team, total, price(type) -> paint (no number = can't be painted) } or null (sandbox). Spent starts at 0. */
+    setBudget(spec) {
+      endStroke();
+      world.budget = spec ? { team: spec.team, total: spec.total, spent: 0, price: spec.price, paid: new Map(), kids: new Map(), locked: false, out: false, startTime: -1 } : null;
+      world.emit('budget', { on: !!spec });
+    },
+    /** null in the sandbox, else { team, total, spent, left, locked, startTime } (a copy). */
+    get budget() { const B = world.budget; return B ? { team: B.team, total: B.total, spent: B.spent, left: B.total - B.spent, locked: B.locked, startTime: B.startTime } : null; },
     // ---- maps (OURS, Part 2 step 7, STEP7.md: sim/maps/index.js) ----
     get mapId() { return mapId; },
     get map() { return world.map || null; },
@@ -226,12 +294,14 @@ export function createGame({ W = 800, H = 600, seed = 1, march = false } = {}) {
     start() {
       if (!world.holding) return;
       world.holding = false; world.emit('holding', { holding: false });
+      if (world.budget) { endStroke(); world.budget.locked = true; world.budget.startTime = world.time; }   // STEP9 LEAD: the army is set
       if (record) record.begin(world);
       paused = false;
     },
     tick() { if (!paused) { step(world); watch(); } },
     // End-of-battle watch: '' | 'left' | 'right' | 'draw' (tick() and advance() already run it).
     watchRound: watch,
+    get lastResult() { return lastResult; },   // STEP9 LEAD: what the last tick's watch said
     // Fixed-step loop helper: real dt clipped to 0.25 s, ≤ 4 ticks per frame, leftover clipped to 0.25 s.
     // Returns the draw alpha (1 when paused) (OG game.js:6962-6986).
     advance(realDt) {
@@ -253,8 +323,10 @@ export function createGame({ W = 800, H = 600, seed = 1, march = false } = {}) {
     unitAt(x, y, r = 0) {
       world.syncGrid();
       let best = null, bd = Infinity;
+      const B = world.budget;
       world.query(x, y, r + 46, (u) => {
         if (!POS.canPossess(u)) return;
+        if (B && u.team !== B.team) return;   // STEP9 LEAD: a campaign battle: only your own units
         const d = hypot(u.x - x, u.y - (y + (u.z || 0) * 0.5)) - u.radius;   // a unit in the air is drawn higher
         if (d <= r && d < bd) { bd = d; best = u; }
       });

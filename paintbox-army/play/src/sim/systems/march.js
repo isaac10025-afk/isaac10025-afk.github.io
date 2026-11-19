@@ -129,6 +129,15 @@ export function run(world) {
       continue;
     }
     if (d2 <= reach * reach) continue;
+    // attack 3 L2 (11-18): a unit whose own brain already closes on its own target at least as fast as the march would
+    // (a trike's charge at 210 px/s, a raptor running in) keeps its brain's goal. The march used to overwrite it with the
+    // walk speed every tick: a trike walked at 40 px/s behind a rifleman backing off at 45, its charge died on the stall
+    // check, and the battle never ended (trike v rifle 1v1 / 9 trikes v 1 rifle, every seed). The march still drives
+    // units that hold back, circle or back away (no goal toward the target).
+    if (own && !scuffle) {
+      const dd = Math.sqrt(d2) || 1, toward = (u.goalX * dx + u.goalY * dy) / dd;
+      if (toward >= speed) continue;
+    }
     u.proneWant = 0; if (u.b && u.b.proneWant === 1) u.b.proneWant = 0;   // a prone sniper gets up (it can't crawl)
     if (u.state !== STATE.ENGAGE) setState(u, STATE.ADVANCE);
     moveTo(world, u, t.x, t.y, speed, false);

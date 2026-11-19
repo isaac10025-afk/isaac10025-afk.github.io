@@ -26,6 +26,9 @@ const T = {
   braceStun: 0.5,     // s stunned after hitting a braced shield
   stall: 0.3,         // a charge slowed under 30 % of its speed (after 0.4 s) is over
   home: 1.2,          // rad/s: until it hits someone the charge bends this much toward its target (dodgers still get a chance)
+  runOn: 0.45,        // s: after goring its first enemy it ploughs on this long (through the line behind), then the charge ends.
+                      // attack 3 (11-18): it used to run on to the full 2.2 s: ~350 px past a flipped rifleman, both out of sight,
+                      // standing idle until the march (1v1 / small fights)
   jab: 20, jabEvery: 0.9, jabPush: 120,
 };
 const CHARGE = 1, DAZED = 2;   // subState
@@ -78,6 +81,7 @@ function charging(w, u) {
   const b = u.b, now = w.time, sp = T.run * T.chargeMul;
   if (u.stun > 0 || now - b.t0 >= T.chargeTime) { endCharge(w, u); return; }
   if (now - b.t0 > 0.4 && hypot(u.vx, u.vy) < T.stall * sp) { endCharge(w, u); return; }
+  if (b.k >= 0 && now - b.t1 >= T.runOn) { endCharge(w, u); return; }
   const t = b.k < 0 && u.target >= 0 ? w.unitById(u.target) : null;
   if (t && t.hp > 0) { // bend a little toward the target
     const a = Math.atan2(b.dy, b.dx), want = Math.atan2(t.y - u.y, t.x - u.x), da = angleDiff(a, want), step = T.home / 60;
@@ -110,7 +114,7 @@ function charging(w, u) {
         w.emit('block', { x: o.x, y: o.y, v: 1, type: o.type });
         daze(w, u, T.braceStun); return;
       }
-      b.k = o.id;
+      b.k = o.id; b.t1 = now;
       const pass = damage(w, o, T.gore, u);
       u.attack = 1;
       w.emit('trample', { x: o.x, y: o.y, v: 1.5, type: u.type });

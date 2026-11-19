@@ -1834,6 +1834,41 @@ export const RECIPES = {
     });
   } },
 
+  // ---------------------------------------------------------------- OURS: Part 2 step 9 (STEP9 UI: the campaign)
+  'star-stamp': { dur: 0.5, make(o) { // a rubber stamp thumps the card (wood + a paper slap), and a bright ding (played at 3 rising rates)
+    const k = rr(0.97, 1.03);
+    thump(o, 0, 330 * k, 190, 0.02, 0.8);
+    wood(o, 0, 520 * k, 0.03, 0.6);
+    noise(o, 0, 0.06, perc(0.001, 0.014), { amp: 0.6, filt: ['bp', 1900 * k, 0.9] });
+    bell(o, 0.012, 1318.5 * k, 0.24, 0.55); bell(o, 0.012, 1975.5 * k, 0.16, 0.2);
+  } },
+  'paint-out': { dur: 0.55, make(o) { // an empty paint tube squeezed: pfft, pt, pt, and a little sad bwomp
+    const k = rr(0.94, 1.06);
+    [[0, 0.09, 1], [0.13, 0.05, 0.6], [0.22, 0.04, 0.45]].forEach(([at, d, g]) => {
+      noise(o, at, d, hump(d, 0.7), { amp: 0.9 * g, filt: ['bp', glide(900 * k, 1600 * k, d), 1.4] });
+      thump(o, at, 210 * k, 150, 0.012, 0.35 * g);
+    });
+    tone(o, 0.26, 0.26, glide(330 * k, 196 * k, 0.22), ar(0.01, 0.12, 0.26), { w: 'tri', amp: 0.55, vib: 0.02, vibRate: 9 });
+  } },
+  'camp-win': { dur: 1.4, make(o) { // a toy band hit: snare roll, then a bright chord on toy horns with a glockenspiel on top
+    for (let i = 0; i < 8; i++) noise(o, i * 0.03, 0.05, perc(0.001, 0.02), { amp: 0.25 + 0.04 * i, filt: ['bp', 2600, 0.8] });
+    const chord = (at, d, fs, amp) => fs.forEach((f) => {
+      tone(o, at, d, f, ar(0.01, d * 0.55, d), { w: 'square', amp: amp, filt: ['lp', 2400, 0.8], vib: 0.01, vibRate: 6 });
+      tone(o, at, d, f * 2, ar(0.01, d * 0.4, d), { w: 'tri', amp: amp * 0.5 });
+    });
+    chord(0.26, 0.14, [523.25, 659.25], 0.16);
+    chord(0.42, 0.9, [587.3, 740, 880], 0.15);
+    [1174.7, 1480, 1760, 2349.3].forEach((f, i) => bell(o, 0.42 + i * 0.06, f, 0.3, 0.35));
+    thump(o, 0.42, 180, 110, 0.03, 0.5);
+  } },
+  'camp-lose': { dur: 1.6, make(o) { // a sad toy trombone: wah, wah, wah-waaah (each note sags)
+    const k = rr(0.97, 1.03), notes = [[0, 0.3, 392 * k], [0.34, 0.3, 370 * k], [0.68, 0.3, 349.2 * k], [1.02, 0.56, 329.6 * k]];
+    notes.forEach(([at, d, f], i) => {
+      const last = i === notes.length - 1;
+      tone(o, at, d, (t) => f * (1 - 0.03 * Math.min(1, t / d)), ar(0.03, last ? 0.3 : 0.1, d), { w: 'saw', amp: 0.4, filt: ['lp', glide(1600, 700, d), 1.2], vib: last ? 0.03 : 0.008, vibRate: 5 });
+      tone(o, at, d, f, ar(0.03, 0.1, d), { w: 'tri', amp: 0.3 });
+    });
+  } },
   // --- ambient beds (loops)
   'amb-lava': { dur: 3.0, loop: true, make(o) { // ours (step 7): lava on the field churns and blorps
     const d = o.length / SR;

@@ -10,7 +10,7 @@
 //  - empty(): the possessed empty swing (attack held at nobody) with `as`.
 // No allocation per tick: query callbacks are module-level functions with module-level scratch.
 import {
-  ACT, act, power, used, STATE, hypot, angleDiff, setState, advanceTo, clearLine, damage, push, ENEMY,
+  ACT, act, power, used, STATE, LEAP, hypot, angleDiff, setState, advanceTo, clearLine, damage, push, ENEMY,
 } from '../lib.js';
 import { circle, oddsApproach, blockedSpark, perchOf, hooks } from '../../combat/index.js';
 
@@ -129,5 +129,7 @@ export function iceCrack(w, x, y, r, dmg) {
 export function enemiesNear(w, u, x, y, r, out) { return w.queryMask(x, y, r, ENEMY[u.faction], out, out.length); }
 /** A unit is up in the air (tossed, hopping, flying high): ground blows pass under it. */
 export function airborne(o) { return o.z > 0 || o.vz > 0; }
+/** ATTACK3 L4: a made flyer at the bottom of its melee dive (z <= 6, LEAP.FLY: it never quite lands) counts as on the ground for a ground move (slam, ram shove). */
+export function lowFlyer(o) { return o.leaping === LEAP.FLY && !(o.z > 6); }
 /** Our stance after a weapon move: holds its pose code while it lasts, then clears it. */
 export function poseFor(w, u, code, secs) { if (u.b.act === code && poseAge(w, u) >= secs) act(w, u, ACT.NONE); }

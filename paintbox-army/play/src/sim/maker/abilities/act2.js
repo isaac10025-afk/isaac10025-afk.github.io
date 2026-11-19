@@ -36,7 +36,7 @@ import { submerged } from '../../combat/env.js';
 import { pondAt } from '../../terrain/water.js';
 import { touchable } from '../../units/robots/_lib.js';
 import { isMetal } from '../../units/robots/magnetbot.js';                  // STEP6 metal rule (robots, UFO, mech + armour types)
-import { controllable as alienCanTake } from '../../units/space/mindalien.js';
+import { controllable as alienCanTake, setHeldElsewhere } from '../../units/space/mindalien.js';
 import { holdable } from '../../units/ocean/_lib.js';
 import { living, high as upHigh } from '../../units/bugs/_lib.js';
 import { transformUnit } from '../../units/mythical/turn.js';
@@ -457,6 +457,10 @@ function mindRecOf(w, id) { const s = WS.get(w); if (!s) return null; for (const
 /** May a made unit take v's mind? The mind alien's rule (no machines, bosses, Mindless, risen, slimes, the driven unit, its
  *  thralls) + not already some made unit's thrall. */
 function canTake(w, v) { return alienCanTake(w, v) && mindRecOf(w, v.id) === null; }
+// attack 4 L2: a mind alien may not take a made unit's thrall. It could: the made unit dropped its record without giving
+// the unit back, the alien then gave it back to the side it took it from (the made unit's), so it fought for the made
+// unit's side for good.
+setHeldElsewhere((w, v) => mindRecOf(w, v.id) !== null);
 function newGroup(w, v, faction) { const gs = w.groups, g = gs.create(v.type, faction); if (g >= 0) { gs.join(g); gs.release(g); } return g; }
 // one-off at a side change: units that now share v's side drop it as a target, and v drops its own (mindalien.js retarget)
 function retarget(w, v) {
@@ -499,7 +503,7 @@ function mindSys(w) {
     if (!v || !(v.hp > 0)) { const a = w.byId.get(e.by), bag = a && a.b && a.b.ab ? a.b.ab[e.slot] : null; if (bag && bag.thrall === e.id) bag.thrall = -1; dropRec(s, L, k); continue; }
     const a = w.unitById(e.by);
     if (!a || !(a.hp > 0)) { mindGiveBack(w, e); dropRec(s, L, k); continue; }
-    if (v.faction !== a.faction) { const bag = a.b.ab ? a.b.ab[e.slot] : null; if (bag && bag.thrall === e.id) bag.thrall = -1; dropRec(s, L, k); continue; }   // someone else took it (or our unit changed sides)
+    if (v.faction !== a.faction) { mindGiveBack(w, e); dropRec(s, L, k); continue; }   // our unit changed sides (a mind alien or another made Mind took it): the thrall goes home (attack 4 L2: it was dropped where it stood, on our old side for good)
     if (v.state === STATE.FLEE) { v.state = STATE.IDLE; v.stateTime = 0; }
     if (v.morale < T.mind.nerve) v.morale = T.mind.nerve;
   }

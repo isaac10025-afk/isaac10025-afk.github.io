@@ -9,12 +9,12 @@
 //   recipeOf(type) · isMade(type) · madeTypes() · buildDef(recipe) (not registered) · clearMadeUnits(world, type)
 //   + registry.js re-exports (readyWeapons, readyAbilities, getWeapon, getAbility) and catalog.js data.
 import { registerUnit, unregisterUnit, getDef } from '../defs.js';
-import { F, INT } from '../factions.js';
-import { STATE } from '../const.js';
+import { F, INT, isHostile } from '../factions.js';
+import { STATE, CAUSE } from '../const.js';
 import { buildRisen } from '../units/mythical/risen.js';
 import { WEAPONS, ABILITIES, BODY_IDS, SIZES, HP_STEPS, SPEED_STEPS, COLORS, HATS, MINE_MAX } from './catalog.js';
 import { WEAPON_MODS, ABILITY_MODS, getWeapon, getAbility, weaponRow, abilityRow, readyWeapons, readyAbilities } from './registry.js';
-import { targetOf, fleeing, idle, canAuto, meleeFight, swing, hypot } from './lib.js';
+import { targetOf, fleeing, idle, canAuto, meleeFight, swing, hypot, angleDiff, meleeStrike, high } from './lib.js';
 import { release as possessRelease } from '../systems/possess.js';
 
 export * from './catalog.js';
@@ -134,7 +134,39 @@ function brain(w, u) {
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
   if (canAuto(w, u)) for (let i = 0; i < A.length; i++) { const a = A[i]; if (a.act !== undefined && a.act(w, u, t, dx, dy, d, AB[i]) === true) return; }
   W.fight(w, u, t, dx, dy, d, wb);
+  if (W.range > 0) cornered(w, u, b);
   for (let i = 0; i < A.length; i++) { const a = A[i]; if (a.after !== undefined) a.after(w, u, AB[i]); }
+}
+
+// ---------------------------------------------------------------- ATTACK3 L4 (OURS, 11-18): a brain rule a made unit needs
+// because any body can carry any weapon (a slow beast or giant with a sniper rifle, rockets, an oil pot).
+// Cornered: a ranged made unit that an enemy is beating on up close, while its own weapon has hurt nobody for
+// CORNER.after s (a rocket / missile / oil pot / boulder won't fire that close, a sniper won't fire on the move, and a slow
+// beast or giant can't back away like the source's gunman does: it stood there and died), swats that enemy with a body
+// blow (the fists fallback x size) every CORNER.every s. A weapon that works up close (flamer, blunderbuss, pistol whip,
+// crossbow kick, zap...) never gets here: its own damage keeps the clock reset.
+const CORNER = {
+  hit: 1,       // s: hit by a blow this recently ...
+  gap: 30,      // ... from an enemy this close (px past both radii) ...
+  gapPer: 10,   // ... + this x the size step (a bigger body has longer arms)
+  after: 1,     // s with no damage from its own weapon before the first blow
+  every: 0.7,   // s between blows
+  facing: 1.4,  // rad: turned this far toward it before it swings
+};
+function cornered(w, u, b) {
+  const dealt = u.dmgDealt || 0;
+  if (dealt > b.cnDmg) { b.cnDmg = dealt; b.cnT = w.time; }   // its weapon hurt someone: not cornered
+  if (u.possessed === 1 || u.stun > 0 || high(u) || w.time - b.cnT < CORNER.after || w.time < b.bashAt) return;
+  if (!(u.harmByAt >= w.time - CORNER.hit) || u.harmCause !== CAUSE.Blow) return;
+  const a = w.unitById(u.harmBy);
+  if (!a || a.dead || !(a.hp > 0) || !isHostile(u, a) || high(a)) return;
+  const dx = a.x - u.x, dy = a.y - u.y, d = hypot(dx, dy) || 0.001;
+  if (d - u.radius - a.radius > CORNER.gap + CORNER.gapPer * u.def.maker.size) return;
+  const ang = Math.atan2(dy, dx);
+  u.face = ang;
+  if (Math.abs(angleDiff(u.heading, ang)) > CORNER.facing) return;
+  meleeStrike(w, u, a, b.bash);
+  b.bashAt = w.time + CORNER.every; b.cnDmg = u.dmgDealt || 0;   // the blow itself doesn't count as the weapon working
 }
 
 // def patch: object, or a function of the def so far
@@ -173,6 +205,8 @@ export function buildDef(recipe) {
   d.brain = brain;
   d.init = function init(w, u) {
     const b = u.b; b.act = 0; b.actT = 0; b.victim = -1; b.wb = {}; b.ab = abs.map(() => ({}));
+    b.cnT = 0; b.cnDmg = 0; b.bashAt = 0;                                // ATTACK3 L4 cornered: last time its weapon hurt someone, the body blow (fists x size)
+    b.bash = { damage: FISTS.damage * s, damageJitter: FISTS.damageJitter * s, push: FISTS.push * s, stun: FISTS.stun, sound: 'strike' };
     if (W.init) W.init(w, u, b.wb);
     for (let i = 0; i < abs.length; i++) if (abs[i].init) abs[i].init(w, u, b.ab[i]);
   };
@@ -207,10 +241,20 @@ export function unregisterMade(type) {
   unregisterUnit('risen_' + type);
   return unregisterUnit(type);
 }
-/** Take every live unit of a made type (and its zombie copies) off the field, no deaths (an edited / deleted unit). */
+/** Take every live unit of a made type (and its zombie copies) off the field, no deaths (an edited / deleted unit).
+ *  A type that is no longer registered (deleted) loses its corpses too. */
 export function clearMadeUnits(world, type) {
   let n = 0;
   for (const u of world.units) if (!u.dead && (u.type === type || u.type === 'risen_' + type)) { if (u.possessed === 1) possessRelease(world, 'leave'); world.remove(u); n++; }
+  // ATTACK4 L1: a deleted unit's corpses that something holds (necro keeps them, ants, rats) never fade, and with the
+  // recipe gone the art drew them as a grey blob for the rest of the battle. Same removal as the corpse ring's overwrite.
+  if (!RECIPES.has(type) && world.corpses) {
+    for (const c of world.corpses) {
+      if (!c || c.removed || (c.type !== type && c.type !== 'risen_' + type)) continue;
+      c.removed = 1;
+      const cl = world.carrion; if (cl) { const i = cl.indexOf(c); if (i >= 0) cl.splice(i, 1); }
+    }
+  }
   return n;
 }
 export { MINE_MAX, STATE, getDef };

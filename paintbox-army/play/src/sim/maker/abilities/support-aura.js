@@ -291,6 +291,7 @@ let _su = null, _sw = null, _sn = 0;
 function frightOne(o) {
   const u = _su;
   if (o.dead || !(o.hp > 0) || o.inside >= 0 || o.def.prop || o.def.boss || o.def.intelligence !== INT.Animal || o.possessed === 1 || !canHit(u, o)) return;
+  if (o.def.scares === true) return;   // ATTACK3 L4 (OURS): a scarer isn't scared (two made animals with Scare ran each other off, rallied, came back and ran again for good: 0-60 damage in 90 s)
   if (hypot(o.x - u.x, o.y - u.y) - o.radius > SCARE.r * power(u)) return;
   fleeFor(_sw, o, SCARE.flee, u.x, u.y);
   const m = o.def.morale;
@@ -299,6 +300,7 @@ function frightOne(o) {
 }
 registerAbility({
   id: 'scare',
+  def: { scares: true },   // ATTACK3 L4: other scarers pass it over (frightOne)
   init(w, u, bag) { bag.next = w.time + w.rng() * SCARE.every; },
   // its look alone scares animals: an aura, every second (also stunned or driven), as the scarecrow's
   tick(w, u, bag) {

@@ -90,6 +90,27 @@ export function dodgeStep(world, u, runSpeed) {
 // ---- flee steer (OG 412.l, game.js:9182-9209) ----
 export const FLEE_WATER_R = 220, FLEE_EDGE = 90, FLEE_WANDER = 9;
 const _wet = new Float32Array(2);
+// OURS (attack 3, 11-18): FLEE_WALL. A fleeing unit runs straight away from the threat, or along its own heading when it
+// has none, walls or not. Its heading follows its goal, so one that ran into a wall faced the wall for good and pushed
+// into it until it rallied (swamp map: a 12 hp knight 12 s and on; a cornered unit the same). Now when the way ahead is
+// a wall (a wall tile within r + FLEE_WALL.look px), it takes the nearest open way round it, turning the same side each
+// time (by unit id) so it slides along the wall instead of flicking left and right. Water behind a wall doesn't pull a
+// burning unit either (units/*/lib WATER_LOS). OG does the same as before; its painted fields have few walls to corner.
+export const FLEE_WALL = Object.freeze({ look: 12, turns: [0.6, 1.2, 1.8, 2.4, 3.0] });
+/** fleeOpen(world, u, hx, hy, out): (hx, hy) unit vector, or the nearest turn of it that isn't straight into a wall. */
+export function fleeOpen(world, u, hx, hy, out) {
+  out[0] = hx; out[1] = hy;
+  const walls = world.walls; if (!walls || !(walls.count > 0)) return out;
+  const L = u.radius + FLEE_WALL.look, x = u.x, y = u.y;
+  if (!walls.isSolidAt(x + hx * L, y + hy * L)) return out;
+  const a0 = Math.atan2(hy, hx), side = (u.id & 1) === 0 ? 1 : -1;
+  for (const t of FLEE_WALL.turns) for (const sg of [side, -side]) {
+    const a = a0 + sg * t, cx = Math.cos(a), cy = Math.sin(a);
+    if (!walls.isSolidAt(x + cx * L, y + cy * L) && !walls.isSolidAt(x + cx * L * 0.5, y + cy * L * 0.5)) { out[0] = cx; out[1] = cy; return out; }
+  }
+  return out;
+}
+const _open = new Float32Array(2);
 /** fleeSteer(world, u, threatUnit|null, speed): sets goal = away-direction × speed. */
 export function fleeSteer(world, u, from, speed) {
   initCombat(u);
@@ -101,7 +122,7 @@ export function fleeSteer(world, u, from, speed) {
   let d = hypot(hx, hy) || 1; hx /= d; hy /= d;
   if (u.burning > 0) {
     u.wander += FLEE_WANDER * signed(world) * DT;
-    if (intel(u.def) !== INTEL.Mindless && nearestWet(world, x, y, FLEE_WATER_R, _wet)) {
+    if (intel(u.def) !== INTEL.Mindless && nearestWet(world, x, y, FLEE_WATER_R, _wet) && !(world.walls && world.walls.count > 0 && !world.walls.lineOfSight(x, y, _wet[0], _wet[1]))) { // OURS: water behind a wall doesn't count (FLEE_WALL)
       const wx = _wet[0] - x, wy = _wet[1] - y, wd = hypot(wx, wy) || 1;
       hx = (wx / wd) * 0.8 + 0.2 * Math.cos(u.wander); hy = (wy / wd) * 0.8 + 0.2 * Math.sin(u.wander);
     } else { hx = 0.35 * hx + 0.65 * Math.cos(u.wander); hy = 0.35 * hy + 0.65 * Math.sin(u.wander); }
@@ -110,5 +131,6 @@ export function fleeSteer(world, u, from, speed) {
   if (x < e) hx += (e - x) / e; else if (x > W - e) hx -= (x - (W - e)) / e;
   if (y < e) hy += (e - y) / e; else if (y > H - e) hy -= (y - (H - e)) / e;
   d = hypot(hx, hy) || 1;
-  u.goalX = (hx / d) * speed; u.goalY = (hy / d) * speed;
+  fleeOpen(world, u, hx / d, hy / d, _open);                                // OURS: FLEE_WALL above
+  u.goalX = _open[0] * speed; u.goalY = _open[1] * speed;
 }

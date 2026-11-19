@@ -195,6 +195,23 @@ function icon(c, key, x, y, s, col, R, bg = C.cloud) {
       fl([[14.6, 2.4], [5.6, 13.4], [11.4, 13.6], [8.8, 21.6], [18.6, 9.8], [12.8, 9.8]]); break;
     case 'none': // an empty slot: a ring with a slash
       outline(c, ring(12, 12, 7.6, 7.6, R, 0.04, 11), R, 2.4, { col }); st([[6.8, 17.2], [17.2, 6.8]], 2.4); break;
+    // ---- Part 2 step 9 (OURS, STEP9 UI): the campaign ----
+    case 'campaign': // a red flag on a pole with a yellow star on it
+      st([[6.2, 21.4], [6, 3]], 2.4);
+      fill(c, poly([[6.8, 3.8], [12, 2.6], [16.4, 4.6], [21.2, 3.4], [20.6, 12.6], [16, 13.8], [11.6, 11.8], [6.8, 13]], R, 0.25), C.red, R, { sharp: true, vary: 0.08, edge: 0 });
+      outline(c, [[6.8, 3.8], [12, 2.6], [16.4, 4.6], [21.2, 3.4], [20.6, 12.6], [16, 13.8], [11.6, 11.8], [6.8, 13]], R, 1.6, { col });
+      fill(c, poly(Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 1.5 : 3.4; return [13.8 + Math.cos(a) * r, 8.2 + Math.sin(a) * r]; }), R, 0.1), C.yellow, R, { sharp: true, edge: 0, vary: 0.03 });
+      break;
+    case 'leave': // out of the door: a door frame, a fat arrow going out
+      st([[13.4, 4], [5.4, 4.2], [5.6, 20], [13.4, 20]], 2.2);
+      st([[9.6, 12], [20.4, 12.1]], 2.8); st([[16.4, 7.8], [20.8, 12], [16.4, 16.2]], 2.8);
+      break;
+    case 'back': st([[15.6, 4.8], [8.2, 12], [15.6, 19.2]], 3.4); break; // a fat arrow back
+    // ---- Part 2 step 10 (OURS, STEP10 LEAD): share codes ----
+    case 'share': // three paint dabs (red, blue, yellow) joined by ink strokes: pass it on
+      st([[8.4, 10.8], [15.4, 6.8]], 2.1); st([[8.4, 13.2], [15.4, 17.2]], 2.1);
+      for (const [px, py, cl] of [[17.6, 5.6, C.red], [6.2, 12, C.blue], [17.6, 18.4, C.yellow]]) { const rr = ring(px, py, 3.2, 3.1, R, 0.06, 9); fill(c, rr, cl, R, { edge: 0 }); outline(c, rr, R, 1.4, { col }); }
+      break;
     case 'bosses': // a gold crown: three points with balls, a band with a red jewel
       fl([[4.2, 19.2], [3.2, 8.2], [8.2, 12.4], [12, 4.8], [15.8, 12.4], [20.8, 8.2], [19.8, 19.2]]);
       for (const [bx, by] of [[3.1, 6.9], [12, 3.6], [20.9, 6.9]]) dab(c, bx, by, 1.8, col, R);
@@ -429,6 +446,41 @@ function paintAll() {
   for (const k of ['person', 'animal', 'beast', 'giant']) img(`body-${k}`, 64, 48, sil(k));
   // a yellow paint swash behind report headings
   img('swash', 120, 18, (c, R) => brush(c, [[4, 10.5], [40, 9], [80, 10], [116, 8.5]], 11, C.yellow, R, { bristles: 9, taper: 0.25, dry: 0.35, vary: 0.08 }));
+  // ---- Part 2 step 9 (OURS, STEP9 UI): the campaign ----
+  for (const [key, col] of [['campaign', C.ink], ['leave', C.ink], ['back', C.ink]]) img(`ico-${key}`, 24, 24, (c, R) => icon(c, key, 12, 12, 1, col, R));
+  img('ico-share', 24, 24, (c, R) => icon(c, 'share', 12, 12, 1, C.ink, R));   // STEP10 LEAD
+  // stars = rubber stamps: red ink with the gaps a rubber stamp leaves, a little crooked; not won = an empty ink outline
+  const star = (cx, cy, ro, ri, rot) => Array.from({ length: 10 }, (_, i) => { const a = rot - Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? ri : ro; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; });
+  img('star-on', 48, 48, (c, R, w, h) => {
+    const pts = poly(star(w / 2, h / 2 + 1.5, 21.5, 9.6, -0.07), R, 0.7);
+    c.save(); path(c, pts); c.clip();
+    fill(c, pts, C.red, R, { sharp: true, sp: 1.1, vary: 0.14, edge: 0 });
+    for (let i = 0; i < 34; i++) dab(c, 3 + R() * (w - 6), 3 + R() * (h - 6), 0.35 + R() * 0.85, C.paperL, R);   // ink gaps
+    brush(c, [[w * 0.18, h * 0.62], [w * 0.5, h * 0.55], [w * 0.84, h * 0.6]], 1.4, C.paperL, R, { bristles: 2, taper: 0.4, dry: 0.6, vary: 0.05 });
+    c.restore();
+    outline(c, pts, R, 1.8, { col: tone(C.red, -0.3), bristles: 3, jit: 0.5 });
+  });
+  img('star-off', 48, 48, (c, R, w, h) => {
+    const pts = poly(star(w / 2, h / 2 + 1.5, 20.5, 9.2, 0.04), R, 0.5);
+    fill(c, pts, C.paperD, R, { sharp: true, sp: 1.4, vary: 0.03, edge: 0 });
+    outline(c, pts, R, 1.6, { col: C.kraftD, bristles: 2, jit: 0.4 });
+  });
+  // world posters (9-slices): torn paper in each tab's paint, laid a little crooked with a soft shadow
+  const poster = (col) => (c, R, w, h) => {
+    const pts = [], tear = (x0, y0, x1, y1, nx, ny) => { const n = Math.max(2, Math.round(Math.hypot(x1 - x0, y1 - y0) / 5)); for (let i = 0; i < n; i++) { const k = i / n, d = R() * 2.6; pts.push([x0 + (x1 - x0) * k + nx * d, y0 + (y1 - y0) * k + ny * d]); } };
+    tear(4, 3, w - 6, 3, 0, 1); tear(w - 6, 3, w - 6, h - 7, -1, 0); tear(w - 6, h - 7, 4, h - 7, 0, -1); tear(4, h - 7, 4, 3, 1, 0);
+    c.fillStyle = 'rgba(70,45,15,0.34)'; c.save(); c.translate(2, 3); path(c, pts); c.fill(); c.restore();
+    fill(c, pts, col, R, { sharp: true, sp: 1.6, vary: 0.07, edge: 0, ang: 0 });
+    outline(c, pts, R, 1.3, { bristles: 2, jit: 0.3, col: tone(col, -0.38) });
+  };
+  for (const w of ['army', 'animals', 'mythical', 'dinos', 'siege', 'pirates', 'robots', 'space', 'ocean', 'sports', 'bugs', 'bosses'])
+    nine(`poster-${w}`, 96, 96, [16, 16, 16, 16], poster(TAB_COL[w]));
+  // the budget bar: a paper track with an ink rim (9-slice), filled with a strip of blue paint (repeats sideways)
+  nine('camp-track', 60, 18, [8, 10, 8, 10], (c, R, w, h) => blob(c, stadium(1.5, 1.5, w - 4, h - 4, R, 0.3), C.paperL, R, 1.8, { ang: 0 }), { outset: 1 });
+  img('camp-fill', 64, 16, (c, R, w, h) => {
+    c.fillStyle = C.blue; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 4; i++) { const y = 2 + i * 3.8 + R(); brush(c, [[-6, y], [w / 2, y + (R() - 0.5)], [w + 6, y]], 1.6, i % 2 ? tone(C.blue, 0.18) : tone(C.blue, -0.12), R, { bristles: 3, taper: 0, dry: 0.4, vary: 0.04, swell: 0 }); }
+  });
   return out;
 }
 

@@ -6,6 +6,7 @@ import { gunBrain, gunInit } from '../../combat/index.js';
 import {
   DT, S, FACTION, LOCO, INTEL, SOLDIER_FLOCK, SOLDIER_MORALE, PERCH_H, setState, peekTarget, wetAt, hashRoll, signed,
   turnToward, emit, hyp, anyWater,
+  anyWalls, wallLine,
 } from './_shared.js';
 
 // Standing rifle `y` (OG game.js:16347-16368).
@@ -86,6 +87,7 @@ function perchStep(world, u, dt) {
   if (climb === 0) { // still walking to the tree (OG game.js:16431-16453)
     const ax = ox - u.x, ay = oy - u.y, h = hyp(ax, ay) || 0.001;
     if (!ok || u.burning > 0 || u.state === S.FLEE || (t && hyp(t.x - u.x, t.y - u.y) < P.perchQuitTarget)) { u.perch = -1; return false; }
+    if (anyWalls(world) && !wallLine(world, u.x, u.y, ox, oy)) { u.perch = -1; return false; } // OURS (attack 3): TREE_LOS below
     if (h > u.radius + tr + P.climbReach) {
       setState(u, S.ADVANCE);
       u.goalX = (ax / h) * D.walkSpeed; u.goalY = (ay / h) * D.walkSpeed; u.face = Math.atan2(ay, ax);
@@ -111,6 +113,11 @@ function perchStep(world, u, dt) {
   u.hidden = u.climb < 0.5 ? 0 : (u.firedAt > 0 && world.time - u.firedAt < P.hideFiredTime ? P.hideFired : P.hide); // OG game.js:16497
   return true;
 }
+// OURS (attack 3, 11-18): TREE_LOS. A sniper (ape, giant: same rule in their files) took the nearest free tree within
+// 150 px and walked to it in a straight line, walls or not, so on the step-7 maps (village, castle) one picked a tree on
+// the far side of a wall and stood pressed into the wall until a target came within 100 px (village: 13-20 s). OG does
+// the same; its painted fields rarely have a wall between a sniper and a tree that close. Now only a tree it can see is
+// picked, and one walking to its tree gives it up if a wall comes between them.
 // Look for a tree to climb (OG game.js:16506-16529).
 function perchSearch(world, u) {
   if ((world.tick + u.index) % P.perchEvery !== 0 || hashRoll(u.index, world.tick) >= P.perchRoll) return;
@@ -118,8 +125,10 @@ function perchSearch(world, u) {
   const t = peekTarget(world, u);
   if (t && hyp(t.x - u.x, t.y - u.y) < P.perchNoTarget) return;
   let best = null, bd = Infinity;
+  const walled = anyWalls(world);
   world.query(u.x, u.y, u.radius + P.perchSearch, (o) => {
     if (o.faction !== FACTION.Props || !treeFree(world, o, u)) return;
+    if (walled && !wallLine(world, u.x, u.y, o.x, o.y)) return; // OURS: TREE_LOS
     const d = hyp(o.x - u.x, o.y - u.y);
     if (d < bd) { bd = d; best = o; }
   });

@@ -33,7 +33,9 @@ const T = {
   touchEvery: 0.5,                  // s: whatever touches it is set alight this often
   touchPad: 4,                      // px past both bodies counts as touching
   blobEvery: 5,                     // s between blobs
-  blobMin: 150, blobMax: 400,       // px: a target in this range gets a blob
+  blobMin: 110, blobMax: 400,       // px: a target in this range gets a blob. ATTACK3 L3: min 150 -> 110: riflemen back off
+                                    // to ~120 px from what chases them, inside 150: it never threw again and walked after
+                                    // them for the rest of the battle (110 still keeps its 40 px splash well off itself)
   blobFlight: 0.9,                  // s in the air
   blobApex: 70,                     // px: top of the lob
   blobR: 40,                        // splash radius ...

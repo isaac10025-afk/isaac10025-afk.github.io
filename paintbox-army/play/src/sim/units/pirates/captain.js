@@ -34,6 +34,8 @@ const T = {
     band: 18, // px
     facing: 0.6, // rad
     circle: 0.5, // strafing
+    close: 120, // px/s stepping in. attack 3 (11-18): OG soldiers step in at walk x 0.6 (51 px/s here); a rifleman backing
+    // off at 48 plus the strafe kept him 20-30 px out of reach for whole fights (34 captains v 40 rifles: 45-60 s, circling)
   },
   aura: {
     radius: 160, // px

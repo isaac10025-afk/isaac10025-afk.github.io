@@ -43,6 +43,7 @@ const CRUISE = 0, DIVE = 1, LOW = 2, CLIMB = 3, DOWN = 4;   // bag.ph
 
 function flyInit(w, u, bag, z0) {
   bag.ph = CRUISE; bag.t0 = 0; bag.z0 = z0; bag.up = 0; bag.cd = 0; bag.gx = 0; bag.gy = 0;
+  bag.airId = -1; bag.airDmg = 0; bag.airT = 0;   // ATTACK3 L4 airStuck
   u.leaping = LEAP.FLY; u.z = u.pz = 0;   // takes off once the battle starts (tick hooks never run before START)
 }
 function climb(w, u, bag) { bag.ph = CLIMB; endAct(w, u, ACT.DIVE); }
@@ -69,10 +70,23 @@ function flyTick(w, u, bag, id, as) {
   }
   return true;
 }
+// ATTACK3 L4 (OURS): up against another high flyer, a melee weapon that can't strike up there (slam, ram, saw, shove,
+// horns, tail, tail club, a second zombie bite: they need the ground or a grounded victim) did nothing: two such flyers
+// hovered at each other for good (0 damage in 20 s). Close to it with no damage from its own weapon for AIR.giveUp s, it
+// comes down to strike low; the other flyer, now facing a low target, dives at it, and the fight happens down there.
+const AIR = {
+  giveUp: 2.5,      // s close to a high flyer without hurting anyone
+  near: 60,         // px past both bodies: "close to it"
+};
+function airStuck(w, u, t, d, bag) {
+  const dealt = u.dmgDealt || 0;
+  if (bag.airId !== t.id || dealt > bag.airDmg || d > u.radius + t.radius + AIR.near) { bag.airId = t.id; bag.airDmg = dealt; bag.airT = w.time; return false; }
+  return w.time - bag.airT >= AIR.giveUp;
+}
 /** With a target (abilities' act): a melee weapon dives to strike; anything else fights from up there (false). */
 function flyAct(w, u, t, dx, dy, d, bag, id, as) {
   if (bag.ph === DOWN || !meleeW(u)) return false;
-  if (high(t)) { if (bag.ph === DIVE || bag.ph === LOW) climb(w, u, bag); return false; }   // another flyer: fight it up there
+  if (high(t) && !airStuck(w, u, t, d, bag)) { if (bag.ph === DIVE || bag.ph === LOW) climb(w, u, bag); return false; }   // another flyer: fight it up there
   if (bag.ph === LOW) return false;   // low enough: the weapon closes and strikes
   const sp = u.def.runSpeed, reach = u.radius + t.radius;
   if (bag.ph === DIVE) { goAt(u, dx, dy, d, sp); setState(u, STATE.CHARGE); return true; }
@@ -93,7 +107,7 @@ function flyAct(w, u, t, dx, dy, d, bag, id, as) {
 }
 /** After the weapon's fight: a strike while low ends the dive. */
 function flyAfter(w, u, bag) {
-  if (bag.ph === LOW && (u.attack >= 0.999 || u.cooldown > bag.cd + 0.05)) climb(w, u, bag);
+  if (bag.ph === LOW && u.b.act !== ACT.WIND && (u.attack >= 0.999 || u.cooldown > bag.cd + 0.05)) climb(w, u, bag);   // ATTACK3 L4: not mid wind-up (the slam sets its cooldown as it starts: the flyer climbed off before its fists came down)
   bag.cd = u.cooldown;
 }
 function flyIdle(w, u, bag) { if (bag.ph === DIVE || bag.ph === LOW) climb(w, u, bag); return false; }

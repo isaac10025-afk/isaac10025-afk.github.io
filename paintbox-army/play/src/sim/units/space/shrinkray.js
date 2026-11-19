@@ -1,8 +1,8 @@
 // shrinkray (OURS, Space tab): picks the heaviest enemy not yet shrunk within 240 px, aims 0.4 s, and fires a wobbly ring
-// (projectile `shrink`, 350 px/s, steering a little after its mark). Whoever the ring touches first (not a prop) becomes
-// `u.shrink` 0.5 (bosses 0.75): radius, hp and maxHp × it, mass × it² (once, never undone; damage() already makes a
-// shrunk unit hit at its size, render draws it by its radius). Reload 3 s. With nobody left to shrink it keeps its
-// distance and zaps (5) whoever comes close. Owner: SPACE-SIM.
+// (projectile `shrink`, 350 px/s, steering a little after its mark). Whoever the ring touches first (not a prop, not one
+// already small: it passes those) becomes `u.shrink` 0.5 (bosses 0.75): radius, hp and maxHp × it, mass × it² (once,
+// never undone; damage() already makes a shrunk unit hit at its size, render draws it by its radius). Reload 3 s. It
+// keeps its distance between rings; with nobody left to shrink it goes in and zaps (5) (ATTACK3 L3). Owner: SPACE-SIM.
 // Pose codes (STEP6.md): b.act 1 aim → `aim`; 2 fire → `fire`; `atk` zap.
 import {
   alien, initBag, act, actAge, targetOf, setState, idle, fleeing, closeOn, keepAt, meleeFight, clearLine, swing, unitOf,
@@ -28,7 +28,7 @@ const T = {
   band: 40,                 // px slack
   zap: {
     damage: 5, damageJitter: 1, cooldown: 0.8, cooldownJitter: 0.2, push: 40, stun: 0.1,
-    reach: 5, band: 8, facing: 0.7, circle: 0.3, backStep: true,
+    reach: 5, band: 8, facing: 0.7, circle: 0.3, backStep: true, chase: true,   // ATTACK3 L3: in close, it follows a runner (meleeFight)
   },
 };
 const IDLE_S = 0, AIM = 1;   // subState
@@ -44,6 +44,7 @@ export function shrinkUnit(w, v, by) {
 }
 
 // ---------------------------------------------------------------- the ring (projectile `shrink`)
+const shrunk = (o) => o.shrink < 1;
 function stepRing(w, p, i) {
   const m = p.host >= 0 ? w.unitById(p.host) : null;
   if (m && m.hp > 0) {   // steer a little after its mark
@@ -53,7 +54,9 @@ function stepRing(w, p, i) {
   const x0 = p.x, y0 = p.y, dx = p.vx * DT, dy = p.vy * DT;
   p.px = x0; p.py = y0;
   const wall = w.walls.count > 0 ? raycast(w, x0, y0, x0 + dx, y0 + dy) : Infinity;
-  const hit = sweepFirst(w, p, x0, y0, dx, dy, Math.min(1, wall), T.ringPad, false);
+  // ATTACK3 L3: the ring passes through a unit that is already small: the front rank, shrunk first, soaked up every later
+  // ring, so the men behind it never shrank and the shrink rays fired at them all battle
+  const hit = sweepFirst(w, p, x0, y0, dx, dy, Math.min(1, wall), T.ringPad, false, shrunk);
   if (hit) {
     shrinkUnit(w, hit, p.owner >= 0 ? w.unitById(p.owner) : null);
     removeProjectile(w, i); return;
@@ -115,7 +118,9 @@ function brain(w, u) {
   if (!t) { idle(w, u); return; }
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
   if (meleeFight(w, u, t, T.zap, dx, dy, d) !== 0) return;
-  if (u.possessed === 1 || !clearLine(w, u) || d > T.range) { closeOn(w, u, t, dx, dy, d); return; }
+  // ATTACK3 L3: ring ready but nobody left to shrink (its last look found none): go in and zap. Keeping its distance
+  // then left it staring at shrunk foes for the rest of the battle (a legion stopped 120 px off it: neither moved again)
+  if (u.possessed === 1 || !clearLine(w, u) || d > T.range || (ready && !m)) { closeOn(w, u, t, dx, dy, d); return; }
   keepAt(w, u, t, dx, dy, d, T.want, T.band);
 }
 

@@ -141,7 +141,7 @@ export function buildMap(world, id, opts = {}) {
   const rng = world.rng, saved = rng && rng.getState ? rng.getState() : null;
   if (saved !== null) rng.setState(hashStr('props:' + id));
   try {
-    world.mapBuilding = true;
+    world.mapBuilding = true; world.mapUnits = 0;   // STEP10 LEAD: mapIdx counts from 1 each build
     try { def.build(makeApi(world, id, false, shared)); sealEdges(world); }
     finally { world.mapBuilding = false; }
     if (shared.water) recountWater(world, T);

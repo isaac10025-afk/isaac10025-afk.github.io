@@ -348,6 +348,7 @@ function makeUnit(id, type, def) {
     arrowsIn: 0, proneWant: 0, hopStart: D, roaming: 0, roamUntil: D, shelter: -1, rage: D, link: -1, linkAt: D, coat: 0, coatHops: 0,
     heldRadius: D, nextThrow: D, jaws: -1, jawsUntil: D, aimX: D, aimY: D, arrows: null, _cb: 0,
     possessed: 0,   // OURS (Part 2 step 3): 1 = the player drives this unit (systems/possess.js)
+    kid: 0, mapIdx: 0,   // STEP10 LEAD (share codes): kid 1 = spawned by another unit's spawn (crew, rider); mapIdx k = the map build's k-th unit
     // OURS (Part 2 step 6, STEP6.md): status another tab's unit puts on this one. shrink: size factor (shrink ray: 0.5, never
     // undone); webbed: world.time the spider web lets go; floating: world.time a float (gravity bubble, astronaut hit, UFO beam) ends.
     shrink: 1, webbed: -D, floating: -D,   // -D: a double that is already in the past (time starts at 0)
@@ -435,6 +436,7 @@ export class World {
     this.scratch = new Array(SCRATCH); this.gridDirty = true; this.bossList = []; this.bossTick = -1;
     this.colonies = null; this.carrion = null; this.snakes = null; // ANIMALS creates these lazily
     this.timings = null; // set to {} to collect ms per system (tick.js)
+    this.spawnDepth = 0; this.mapUnits = 0; // STEP10 LEAD (share codes): spawn nesting; units a map build made
     this.resize(W, H);
   }
   get teams() { return this.teamMode; }
@@ -507,7 +509,9 @@ export class World {
     this.units.push(u); this.byId.set(u.id, u); this.liveCount++;
     if (u.group >= 0) this.groups.join(u.group);
     if (initCombat) initCombat(u);
-    if (def.init) def.init(this, u);
+    if (this.spawnDepth > 0) u.kid = 1;                                  // STEP10 LEAD: made by another unit's init (share.js skips it)
+    if (this.mapBuilding) u.mapIdx = ++this.mapUnits;                     // STEP10 LEAD: a map's prop (share.js: the map makes it again)
+    if (def.init) { this.spawnDepth++; try { def.init(this, u); } finally { this.spawnDepth--; } }
     this.gridDirty = true;
     return u;
   }
@@ -525,11 +529,25 @@ export class World {
       u.home = f; u.homeGen = sides.gen[f];
       return f;
     };
+    // attack 4 L2: a helper (crew, gunners, deckhands, siege-tower halberds, bees, crows, skeletons, slime splits, a made
+    // unit's bitten zombies: spawn opts.like) joins its maker's team, wherever it stands, as when it is spawned in Team
+    // battle (and as ants follow their hill). By its own half, a crew slot across the midline put that crewman on the
+    // other team: he hit his own catapult / ram, a hive's bees stung their hive.
+    const teamOf = (u, depth) => {
+      if (u.likeId >= 0 && depth < 8) { const m = this.unitById(u.likeId); if (m && m !== u && m.hp > 0 && teamable(m.def)) return teamOf(m, depth + 1); }
+      return this.teamAt(u.x);
+    };
     const regroup = new Map(), claimed = new Set(), made = [];
     for (const u of this.units) {
-      if (u.dead || !teamable(u.def)) continue;
-      const t = on ? this.teamAt(u.x) : -1, f = on ? teamFaction(t) : homeOf(u, 0);
-      if (u.faction !== f || u.team !== t) { u.faction = f; u.team = t; u.target = -1; }
+      if (u.dead) continue;
+      if (!teamable(u.def)) { if (u.infection > 0) u.infectTeam = on ? this.teamAt(u.x) : -1; continue; }   // attack 4 L2: a bitten frog (Props) rises as a teamable zombie frog
+      const t = on ? teamOf(u, 0) : -1, f = on ? teamFaction(t) : homeOf(u, 0);
+      if (u.faction !== f || u.team !== t) { u.faction = f; u.team = t; u.target = -1; u.lastVictim = -1; }   // attack 4 L2: + lastVictim (gator / snake revenge, cheetah sprint, piranha + sea prey: kept biting a new teammate)
+      // attack 4 L2: a bite still waiting to turn (boar, cavalry, giant, slime turn when killed) rises on the team the victim
+      // is on now (biter beside it), Undead in free-for-all (OG). It kept the side of the bite: bitten before Team went on,
+      // it rose Undead in a Team battle (a third side the result never counts, its bites more Undead); bitten in Team
+      // battle, it rose on a team faction in free-for-all.
+      if (u.infection > 0) u.infectTeam = t;
       const og = u.group; if (og < 0) continue;
       const key = og * 64 + f;
       let g = regroup.get(key);

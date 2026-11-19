@@ -16,13 +16,16 @@ function loadLang() {
 let lang = typeof window === 'undefined' ? 'en' : loadLang();
 
 export function getLang() { return lang; }
-export function setLang(l) {
+/** save = false: a default (the site's language), not the player's pick, so it is not remembered. */
+export function setLang(l, save = true) {
   if (l !== 'en' && l !== 'zh') return;
   lang = l;
-  try { localStorage.setItem(KEY, l); } catch (e) { /* storage blocked */ }
+  if (save) try { localStorage.setItem(KEY, l); } catch (e) { /* storage blocked */ }
   if (typeof document !== 'undefined') document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
   for (const fn of listeners) fn(l);
 }
+/** Has the player picked a language (EN / 中文 button) on this device? */
+export function langPicked() { try { const v = localStorage.getItem(KEY); return v === 'en' || v === 'zh'; } catch (e) { return false; } }
 export function toggleLang() { setLang(lang === 'en' ? 'zh' : 'en'); }
 export function onLang(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
@@ -212,8 +215,15 @@ const S = {
     maps: 'Maps', map_blank: 'Blank', map_castle: 'Castle', map_beach: 'Beach', map_lake: 'Frozen Lake', map_canyon: 'Canyon', map_village: 'Village', map_volcano: 'Volcano', map_swamp: 'Swamp', map_playground: 'Playground', found: 'Found: {name}!',
     locked: 'Locked', // STEP7 UI: a Secret card not found yet (screen-reader label)
     // STEP8 UI: the Mine tab + the unit maker (button words; the rest are screen-reader / tooltip labels)
+    // STEP10 LEAD (share codes, ui/share.js)
+    share: 'Share', sh_copy: 'Copy battle', sh_copied: 'Copied!', sh_units: 'Copy a unit', sh_paste: 'Paste a code here', sh_load: 'Load',
+    sh_box: 'Copy this code:', sh_broken: "That code doesn't work", sh_new: 'That code needs a newer game', sh_none: 'No code in there',
+    sh_full: 'Mine is full: delete a made unit first', sh_added: 'Added to Mine: {name}', sh_unit_copied: 'Copied: {name}', sh_empty: 'Nothing on the field to copy',
     tab_mine: 'Mine', make_new: 'Make a unit', edit: 'Edit', maker: 'Unit maker', save: 'Save', del: 'Delete', del_sure: 'Delete it?',
     m_name: 'Name', m_body: 'Body', m_size: 'Size', m_hp: 'Health', m_speed: 'Speed', m_weapon: 'Weapon', m_ability: 'Ability', m_colour: 'Colour', m_hat: 'Hat', m_none: 'No ability', back: 'Back',
+    // STEP9 UI: the campaign (button words + result titles; the rest are screen-reader / tooltip labels). Worlds = tab_* words.
+    campaign: 'Campaign', c_leave: 'Leave the battle', c_retry: 'Retry', c_next: 'Next', c_battles: 'Battles', c_win: 'You win!', c_lose: 'You lose', c_time: "Time's up!",
+    c_battle: 'Battle {n}', c_stars: '{n} of {m} stars', c_paint: 'Paint spent',
     paused: 'Paused', clear: 'Clear', pause: 'Pause', play: 'Play', sound: 'Sound', lang: '中文', lang_title: 'Language', slow: 'Slow motion', follow: 'Follow a unit', leave: 'Leave',
     teams: 'Team battle', start: 'Start', red: 'Red team', blue: 'Blue team',
     win_left: 'Red team wins!', win_right: 'Blue team wins!', win_draw: "It's a draw!",
@@ -227,8 +237,14 @@ const S = {
     tab_robots: '机器人', tab_space: '太空', tab_ocean: '海洋', tab_sports: '体育', tab_bugs: '虫子', tab_bosses: '首领', tab_secret: '秘密',
     maps: '地图', map_blank: '空白', map_castle: '城堡', map_beach: '海滩', map_lake: '冰湖', map_canyon: '峡谷', map_village: '村庄', map_volcano: '火山', map_swamp: '沼泽', map_playground: '游乐场', found: '找到了：{name}！',
     locked: '未解锁', // STEP7 UI: a Secret card not found yet (screen-reader label)
+    // STEP10 LEAD (share codes, ui/share.js)
+    share: '分享', sh_copy: '复制战斗', sh_copied: '已复制！', sh_units: '复制单位', sh_paste: '在这里粘贴代码', sh_load: '载入',
+    sh_box: '复制这个代码：', sh_broken: '这个代码用不了', sh_new: '这个代码要新版游戏', sh_none: '里面没有代码',
+    sh_full: '“我的”满了：先删一个单位', sh_added: '已加入“我的”：{name}', sh_unit_copied: '已复制：{name}', sh_empty: '场上没有可复制的东西',
     tab_mine: '我的', make_new: '做个新单位', edit: '编辑', maker: '单位工坊', save: '保存', del: '删除', del_sure: '真的删除？',
     m_name: '名字', m_body: '身体', m_size: '大小', m_hp: '生命', m_speed: '速度', m_weapon: '武器', m_ability: '技能', m_colour: '颜色', m_hat: '帽子', m_none: '不要技能', back: '返回',
+    campaign: '战役', c_leave: '离开战斗', c_retry: '重来', c_next: '下一关', c_battles: '关卡', c_win: '胜利！', c_lose: '失败', c_time: '时间到！', // STEP9 UI
+    c_battle: '第{n}关', c_stars: '{n}/{m}颗星', c_paint: '已用颜料',
     paused: '已暂停', clear: '清空', pause: '暂停', play: '继续', sound: '声音', lang: 'EN', lang_title: '语言', slow: '慢动作', follow: '跟随单位', leave: '离开',
     teams: '团队对战', start: '开始', red: '红队', blue: '蓝队',
     win_left: '红队胜利！', win_right: '蓝队胜利！', win_draw: '平局！',

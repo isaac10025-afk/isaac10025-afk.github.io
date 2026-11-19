@@ -3,7 +3,7 @@
 // (like: they go back to its side when Team battle goes off, world.js reside).
 import { registerAbility } from '../registry.js';
 import { ACT, power, used, STATE, DT, hypot, ENEMY, damage, push, setState, canAuto, igniteNow, registerSystem } from '../lib.js';
-import { maskBit, canHit } from '../../factions.js';
+import { maskBit, canHit, isHostile } from '../../factions.js';
 import { onWorldClear } from '../../world.js';
 import { CAUSE } from '../../const.js';
 import { getDef } from '../../defs.js';
@@ -153,7 +153,7 @@ function releaseBees(w, u, bag, n, foe) {
     const o = w.spawn('bee', u.x + Math.cos(a) * r, u.y + Math.sin(a) * r * 0.5 - 2, { team: u.team, faction: u.faction, like: u, heading: a });
     if (!o) break;
     o.b.home = u.id; o.z = o.pz = BEES.outZ; o.homeX = u.x; o.homeY = u.y - 6;
-    if (foe) { o.target = foe.id; o.react = 0; o.state = STATE.CHARGE; }   // out angry (beehive release)
+    if (foe && isHostile(o, foe)) { o.target = foe.id; o.react = 0; o.state = STATE.CHARGE; }   // out angry (beehive release); ATTACK3 L4: only at an enemy (a blinded ally's blow or our own splash sent the bees at a friend)
     keepId(bag.ids, o.id);
     used(w, u, 'bees');
     made++;
@@ -184,7 +184,7 @@ registerAbility({
   onHit(w, u, amount, att, kind, bag) {   // any hit: bees burst out at the attacker (next tick), at most every 3 s
     if (!(amount > 0) || w.time < bag.next2) return;
     bag.flag = 1;
-    if (att && att.hp > 0 && att !== u) bag.k = att.id;
+    if (att && att.hp > 0 && att !== u && isHostile(u, att)) bag.k = att.id;   // ATTACK3 L4: a friend's blow (blinded, splash) still lets the bees out, at the nearest enemy
   },
 });
 
@@ -237,7 +237,10 @@ registerAbility({
   onDeath(w, u, cause, killer, bag) {
     if (bag.gen >= SPLIT.gens || cause === CAUSE.Turned || cause === 'turned' || u.inside >= 0 || u.eaten === 1) return;
     const slot = slotOf(u, bag); if (slot < 0) return;
-    const g = typeof w.createGroup === 'function' ? w.createGroup(u.type, u.team) : -1, a0 = w.rng() * TAU, sh = u.shrink > 0 ? u.shrink : 1;
+    // attack 4 L2: the copies' group on the side the copies join (u.faction). By its type, a thrall's / a risen copy's copies
+    // (on a mind alien's, a necro's, a biter's side) got a group of the made unit's own side / Undead: their hunt went at
+    // the groups hostile to THAT side (the necro's own skeletons, the alien's army).
+    const g = w.groups && typeof w.groups.create === 'function' ? w.groups.create(u.type, u.faction) : -1, a0 = w.rng() * TAU, sh = u.shrink > 0 ? u.shrink : 1;
     let first = null, n = 0;
     for (let k = 0; k < SPLIT.copies; k++) {
       const a = a0 + k * TAU / SPLIT.copies + 0.3 * (w.rng() - w.rng()), r = u.radius * SPLIT.out;

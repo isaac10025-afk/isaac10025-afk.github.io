@@ -134,6 +134,11 @@ export function run(world) {
     if (cur) { // dropped if it became hidden beyond its hidden radius (OG game.js:4943)
       const h = hidden === 2 ? cur.unseenBySeers : cur.unseen;
       if (h > 0 && (cur.x - x) ** 2 + (cur.y - y) ** 2 > h * h) cur = null;
+      // ATTACK3 L4 (OURS): dropped if it is no longer an enemy. OG never meets this (its sides never change mid-fight), ours
+      // do: a blinded unit swings at friends (dinos/_lib.js sense) and kept that friend as its target after it could see
+      // again (a bee kept stinging a raptor of its own team 8 s+), a mind-taken thrall, a hive's bees sent at an ally that
+      // hit it. A blinded unit keeps its pick (the blind rule is on purpose).
+      else if (!blind && maskHas(mask, cur.faction) === 0) cur = null;
     }
     let pick = chooseTarget(world, u, def, cur, near, Math.sqrt(nd2), R, mask, hidden);
     if (bosses.length > 0 && (!near || nd2 > 1600 || near.def.boss)) {            // boss pull (OG game.js:4945-4948)

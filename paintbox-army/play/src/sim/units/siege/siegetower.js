@@ -49,14 +49,19 @@ function deploy(world, u, cross) {
   const b = u.b; if (b.deployed === 1) return;
   b.deployed = 1;
   const c = Math.cos(u.heading), s = Math.sin(u.heading);
+  // attack 3 (11-18): the halberds get a group of their own (the tower's side). They used to join the tower's painted group:
+  // its formation pull, anchored on the towers, held every halberd within ~60 px of where the towers stood, so they walked
+  // on the spot instead of chasing (22 towers + halberds v cavalry: halberds stuck for 10+ s, 70 px/s goal, 0 speed)
+  const g = world.createGroup(u.type, u.team);
   for (let k = 0; k < T.halberds; k++) {
     // docked: in a row at the door (behind it); else out both sides, two a side (not in front: the tower rolls on)
     const side = cross ? (k - (T.halberds - 1) / 2) * 9 : (k < 2 ? 1 : -1) * (u.radius + 12), back = cross ? (u.radius + 9.9 + 2) * 0.55 : (k % 2 ? 0.45 : -0.45) * u.radius;
     const x = u.x - c * back - s * side, y = u.y - s * back + c * side;
-    const h = world.spawn('halberd', x, y, { group: u.group, team: u.team, heading: u.heading, faction: u.faction, like: u });
+    const h = world.spawn('halberd', x, y, { group: g, team: u.team, heading: u.heading, faction: u.faction, like: u });
     if (!h) break;
     if (cross) startCross(world, h, u, 0);
   }
+  if (g >= 0) world.releaseGroup(g);
   world.emit('deploy', { x: u.x, y: u.y, n: T.halberds, type: u.type, id: u.id });
 }
 

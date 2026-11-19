@@ -68,6 +68,22 @@
 <link rel="modulepreload" href="src/render/cam2d.js">
 <link rel="modulepreload" href="src/render/debug.js">
 <link rel="modulepreload" href="src/render/gl2d.js">
+<link rel="modulepreload" href="src/sim/campaign/budgets.js">
+<link rel="modulepreload" href="src/sim/campaign/index.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/animals.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/army.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/bosses.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/bugs.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/dinos.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/index.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/mythical.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/ocean.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/pirates.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/robots.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/siege.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/space.js">
+<link rel="modulepreload" href="src/sim/campaign/levels/sports.js">
+<link rel="modulepreload" href="src/sim/campaign/prices.js">
 <link rel="modulepreload" href="src/sim/combat/ballistics.js">
 <link rel="modulepreload" href="src/sim/combat/damage.js">
 <link rel="modulepreload" href="src/sim/combat/death.js">
@@ -296,6 +312,8 @@
 <link rel="modulepreload" href="src/sim/units/sports/sumo.js">
 <link rel="modulepreload" href="src/sim/units/sports/tackler.js">
 <link rel="modulepreload" href="src/sim/world.js">
+<link rel="modulepreload" href="src/ui/campaign-store.js">
+<link rel="modulepreload" href="src/ui/campaign.js">
 <link rel="modulepreload" href="src/ui/controls.js">
 <link rel="modulepreload" href="src/ui/counts.js">
 <link rel="modulepreload" href="src/ui/fallback-report.js">
@@ -963,6 +981,187 @@ html[data-ui=paint] .mk-del.armed{border-image:var(--bi-big-red)}
 .mk-pico.none::before{content:"";width:60%;height:60%;max-width:30px;max-height:30px;background:var(--img-ico-none) center/contain no-repeat}
 html:not([data-ui=paint]) .mk-pico.none::before{content:"\2205";font:800 22px/1 var(--font);background:none;width:auto;height:auto}
 
+/* ---- STEP9 UI: the campaign (Part 2 step 9, OURS). ui/campaign.js sizes the panel's grid (--cp-cols, --cp-cw, --cp-ch,
+   --cp-name, --cp-wstar, --cp-hh, --cp-mh, --cp-fh) for the screen, so it fits every phone either way up without scrolling;
+   it also places the budget bar (--camp-under, --camp-mid = the space under it) and scales the result card. ---- */
+#campaign-button{--ico:var(--img-ico-campaign)}
+#leave-button{--ico:var(--img-ico-leave)}
+/* STEP10 LEAD: share codes (ui/share.js): a kraft board taped like the maps panel */
+#share-button{--ico:var(--img-ico-share)}
+.share{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--backdrop);padding:calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));z-index:45}
+.share-sheet{position:relative;display:flex;flex-direction:column;gap:12px;width:min(440px,100%);max-height:100%;padding:62px 16px 16px;background:var(--kraft);border-radius:var(--r-panel);box-shadow:0 4px 0 rgba(70,45,15,.45),0 14px 40px rgba(0,0,0,.3)}
+html[data-ui=paint] .share-sheet{background:var(--img-lip) 0 0/240px 6px repeat-x,var(--img-kraft) 0 0/var(--kraft-tile) repeat,var(--kraft);border-radius:3px}
+html[data-ui=paint] .share-sheet::before,html[data-ui=paint] .share-sheet::after{content:"";position:absolute;top:-20px;width:60px;height:50px;background:0 0/100% 100% no-repeat;pointer-events:none;z-index:3}
+html[data-ui=paint] .share-sheet::before{left:-22px;background-image:var(--img-tape-l)}
+html[data-ui=paint] .share-sheet::after{right:-22px;background-image:var(--img-tape-r)}
+.share-close{--ico:var(--img-ico-close);position:absolute;top:12px;right:12px;z-index:4}
+.sh-copy{align-self:stretch;white-space:normal;padding:12px 20px}
+.sh-copy:focus:not(:focus-visible){outline:none}
+.sh-copy.pop{animation:sh-pop .32s ease-out}
+@keyframes sh-pop{0%{transform:scale(1)}40%{transform:scale(1.06) rotate(-1deg)}100%{transform:scale(1)}}
+.sh-title{align-self:flex-start;color:var(--ink);font:800 13px/1.25 var(--font);letter-spacing:.03em;text-transform:uppercase;padding:1px 7px;background:var(--yellow);border-radius:3px}
+html[data-ui=paint] .sh-title{background:var(--img-swash) center/100% 100% no-repeat;border-radius:0}
+.sh-units{display:flex;flex-direction:column;gap:8px}
+.sh-units[hidden]{display:none}
+.sh-unit-row{display:flex;flex-wrap:wrap;gap:8px}
+.sh-unit{width:52px;height:52px;display:grid;place-items:center;padding:6px;background:var(--card);border:2px solid var(--ink);border-radius:var(--r-card);cursor:pointer;transition:transform .1s}
+.sh-unit:nth-child(odd){transform:rotate(-1.5deg)}
+.sh-unit:nth-child(even){transform:rotate(1.2deg)}
+.sh-unit:active{transform:scale(.94)}
+.sh-unit-icon{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.sh-paste{display:flex;gap:10px;align-items:center;padding:10px 10px 10px 14px;background:var(--card);border:2px solid var(--ink);border-radius:var(--r-card)}
+html[data-ui=paint] .sh-unit,html[data-ui=paint] .sh-paste{background:transparent;border:0;border-radius:0;border-image:var(--bi-mapcard)}
+.sh-in{flex:1;min-width:0;height:3.1em;resize:none;border:0;outline:none;background:transparent;color:var(--ink);font:700 16px/1.35 var(--font);-webkit-user-select:text;user-select:text;overflow-wrap:anywhere}
+.sh-in::placeholder{color:var(--ink);opacity:1}
+.sh-load{flex:none;padding:8px 18px}
+.sh-box{display:flex;flex-direction:column;gap:6px}
+.sh-box[hidden]{display:none}
+.sh-box-label{color:var(--ink);font:800 14px/1.2 var(--font)}
+.sh-box-text{height:4.6em;resize:none;border:2px solid var(--ink);border-radius:var(--r-card);background:var(--cloud);color:var(--ink);font:700 12px/1.3 ui-monospace,Menlo,Consolas,monospace;padding:6px 8px;-webkit-user-select:text;user-select:text;word-break:break-all}
+.sh-msg{margin:0;align-self:center;max-width:100%;background:var(--yellow);border:2px solid var(--ink);border-radius:var(--r-pill);color:var(--ink);font:800 14px/1.25 var(--font);padding:6px 14px 7px;text-align:center}
+.sh-msg.bad{background:var(--red);color:var(--on-paint)}
+.sh-msg[hidden]{display:none}
+.cp-back{--ico:var(--img-ico-back)}
+.cp-close{--ico:var(--img-ico-close)}
+/* stars = rubber stamps: red ink when won, an empty ink outline when not (plain look: a star cut from paint) */
+.cp-star,.cp-mini{display:inline-block;flex:none;background:var(--paper-d);clip-path:polygon(50% 2%,62% 36%,98% 37%,69% 59%,80% 95%,50% 74%,20% 95%,31% 59%,2% 37%,38% 36%)}
+.cp-star.on,.cp-mini.on{background:var(--red)}
+html[data-ui=paint] .cp-star,html[data-ui=paint] .cp-mini{clip-path:none;background:var(--img-star-off) center/100% 100% no-repeat}
+html[data-ui=paint] .cp-star.on,html[data-ui=paint] .cp-mini.on{background-image:var(--img-star-on)}
+.cp-stars{display:inline-flex;align-items:center}
+.cp-title-name,.cp-world-name,.cp-clock,.cp-rtitle{text-shadow:var(--o) 0 0 var(--ink),calc(var(--o)*0.92) calc(var(--o)*0.38) 0 var(--ink),calc(var(--o)*0.71) calc(var(--o)*0.71) 0 var(--ink),calc(var(--o)*0.38) calc(var(--o)*0.92) 0 var(--ink),0 var(--o) 0 var(--ink),calc(var(--o)*-0.38) calc(var(--o)*0.92) 0 var(--ink),calc(var(--o)*-0.71) calc(var(--o)*0.71) 0 var(--ink),calc(var(--o)*-0.92) calc(var(--o)*0.38) 0 var(--ink),calc(var(--o)*-1.0) 0 0 var(--ink),calc(var(--o)*-0.92) calc(var(--o)*-0.38) 0 var(--ink),calc(var(--o)*-0.71) calc(var(--o)*-0.71) 0 var(--ink),calc(var(--o)*-0.38) calc(var(--o)*-0.92) 0 var(--ink),0 calc(var(--o)*-1.0) 0 var(--ink),calc(var(--o)*0.38) calc(var(--o)*-0.92) 0 var(--ink),calc(var(--o)*0.71) calc(var(--o)*-0.71) 0 var(--ink),calc(var(--o)*0.92) calc(var(--o)*-0.38) 0 var(--ink),var(--drop) 0 var(--ink)}
+/* the panel: a kraft board like the maps panel */
+.cp{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--backdrop);padding:calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));z-index:45}
+.cp-sheet{position:relative;padding:64px 14px 14px;background:var(--kraft);border-radius:var(--r-panel);box-shadow:0 4px 0 rgba(70,45,15,.45),0 14px 40px rgba(0,0,0,.3)}
+.cp-sheet.x-right{padding:14px 64px 14px 14px}
+html[data-ui=paint] .cp-sheet{background:var(--img-lip) 0 0/240px 6px repeat-x,var(--img-kraft) 0 0/var(--kraft-tile) repeat,var(--kraft);border-radius:3px}
+html[data-ui=paint] .cp-sheet::before,html[data-ui=paint] .cp-sheet::after{content:"";position:absolute;top:-20px;width:60px;height:50px;background:0 0/100% 100% no-repeat;pointer-events:none;z-index:3}
+html[data-ui=paint] .cp-sheet::before{left:-22px;background-image:var(--img-tape-l)}
+html[data-ui=paint] .cp-sheet::after{right:-22px;background-image:var(--img-tape-r)}
+.cp-close{position:absolute;top:12px;right:12px;z-index:4}
+.cp-head{position:absolute;left:12px;right:60px;top:12px;height:40px;display:flex;align-items:center;gap:10px}
+.cp-back{flex:none}
+.cp-title{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:10px}
+.cp-title-name{--o:2px;--drop:2.5px 3.5px;margin:0;min-width:0;font:800 26px/1.1 var(--font);letter-spacing:.03em;text-transform:uppercase;color:var(--yellow);white-space:nowrap;padding:0 4px 3px}
+.cp-title-stars,.cp-world-stars{flex:none;display:inline-flex;align-items:center;gap:3px;background:var(--cloud);border:2px solid var(--ink);border-radius:var(--r-pill);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cp-title-stars{height:34px;padding:0 12px 1px 5px;font:800 17px/1 var(--font)}
+.cp-title-stars .cp-star{width:24px;height:24px}
+html[data-ui=paint] .cp-title-stars,html[data-ui=paint] .cp-world-stars{background:transparent;border:0;border-radius:0;border-image:var(--bi-pill)}
+.cp-grid{display:grid;grid-template-columns:repeat(var(--cp-cols,4),var(--cp-cw,120px));grid-auto-rows:var(--cp-ch,120px);gap:10px}
+/* worlds: a wall of torn posters, each in its tab's paint, the world's star unit painted big */
+.cp-world{--tilt:0deg;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;width:var(--cp-cw);height:var(--cp-ch);padding:7px 7px 8px;background:var(--wcol,var(--card));border:2px solid var(--ink);border-radius:3px;color:var(--ink);cursor:pointer;transform:rotate(var(--tilt));transition:transform .1s}
+.cp-world:nth-child(4n+1){--tilt:-1.3deg} .cp-world:nth-child(4n+2){--tilt:.9deg} .cp-world:nth-child(4n+3){--tilt:-.5deg} .cp-world:nth-child(4n){--tilt:1.4deg}
+html[data-ui=paint] .cp-world{background:transparent;border:0;border-radius:0;border-image:var(--wbi)}
+html[data-ui=paint] .cp-world::before{content:"";position:absolute;left:50%;top:-9px;width:42px;height:17px;margin-left:-21px;background:var(--img-tape-s) 0 0/100% 100% no-repeat;pointer-events:none;z-index:2}
+.cp-world[data-world=army]{--wcol:#ffd51e;--wbi:var(--bi-poster-army)} .cp-world[data-world=animals]{--wcol:#ff8a12;--wbi:var(--bi-poster-animals)}
+.cp-world[data-world=mythical]{--wcol:#8d4fd6;--wbi:var(--bi-poster-mythical)} .cp-world[data-world=dinos]{--wcol:#e3241a;--wbi:var(--bi-poster-dinos)}
+.cp-world[data-world=siege]{--wcol:#ccd3dc;--wbi:var(--bi-poster-siege)} .cp-world[data-world=pirates]{--wcol:#5fb6f2;--wbi:var(--bi-poster-pirates)}
+.cp-world[data-world=robots]{--wcol:#1db5a6;--wbi:var(--bi-poster-robots)} .cp-world[data-world=space]{--wcol:#f45aa9;--wbi:var(--bi-poster-space)}
+.cp-world[data-world=ocean]{--wcol:#2c6ce0;--wbi:var(--bi-poster-ocean)} .cp-world[data-world=sports]{--wcol:#fdfbf4;--wbi:var(--bi-poster-sports)}
+.cp-world[data-world=bugs]{--wcol:#acd632;--wbi:var(--bi-poster-bugs)} .cp-world[data-world=bosses]{--wcol:#2a2421;--wbi:var(--bi-poster-bosses)}
+.cp-world:focus,.cp-battle:focus{outline:none}
+.cp-world:focus-visible,.cp-battle:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+@media (hover:hover){ .cp-world:hover,.cp-battle:hover{transform:translateY(-3px) rotate(calc(var(--tilt) - 1deg))} }
+.cp-world:active,.cp-battle:active{transform:translateY(1px) rotate(var(--tilt)) scale(.98)}
+.cp-world-pic{display:grid;place-items:center;flex:1;min-height:0;pointer-events:none}
+.cp-world-cv{display:block}
+.cp-world-name{--o:calc(var(--cp-name,16px)*.09);--drop:calc(var(--o) + 1px) calc(var(--o) + 2px);flex:none;max-width:100%;font:800 var(--cp-name,16px)/1.15 var(--font);letter-spacing:.02em;text-transform:uppercase;color:var(--on-paint);white-space:nowrap;padding:0 3px 2px;pointer-events:none}
+.cp-world-stars{padding:2px 9px 3px 4px;font:800 calc(var(--cp-wstar,18px)*.8)/1 var(--font);pointer-events:none}
+.cp-world-stars .cp-star{width:var(--cp-wstar,18px);height:var(--cp-wstar,18px)}
+/* battles: taped cards, number + stamps, the map, the enemy's units and how many */
+.cp-battle{--tilt:0deg;position:relative;display:flex;flex-direction:column;gap:4px;width:var(--cp-cw);height:var(--cp-ch);padding:7px;background:var(--card);border:2px solid var(--kraft-d);border-radius:var(--r-card);color:var(--ink);cursor:pointer;transform:rotate(var(--tilt));transition:transform .1s}
+.cp-battle:nth-child(4n+1){--tilt:-.7deg} .cp-battle:nth-child(4n+3){--tilt:.6deg}
+.cp-battle.now{background:var(--yellow);border:3px solid var(--ink)}
+.cp-battle.none{visibility:hidden}
+html[data-ui=paint] .cp-battle,html[data-ui=paint] .cp-battle.now{background:transparent;border:0;border-radius:0;border-image:var(--bi-mapcard)}
+html[data-ui=paint] .cp-battle.now{border-image:var(--bi-mapcard-on)}
+html[data-ui=paint] .cp-battle::before{content:"";position:absolute;left:50%;top:-8px;width:40px;height:16px;margin-left:-20px;background:var(--img-tape-s) 0 0/100% 100% no-repeat;pointer-events:none;z-index:2}
+.cp-battle-head{flex:none;display:flex;align-items:center;justify-content:space-between;height:var(--cp-hh,28px);pointer-events:none}
+.cp-num{display:grid;place-items:center;flex:none;height:var(--cp-hh,28px);min-width:var(--cp-hh,28px);padding:0 2px 2px;background:var(--yellow);border:2px solid var(--ink);border-radius:50%;font:800 calc(var(--cp-hh,28px)*.62)/1 var(--font);color:var(--ink)}
+html[data-ui=paint] .cp-num{background:var(--img-round-on) center/100% 100% no-repeat;border:0;border-radius:0}
+.cp-battle.now .cp-num{background-color:var(--cloud)}
+html[data-ui=paint] .cp-battle.now .cp-num{background-image:var(--img-round)}
+.cp-battle-head .cp-star{width:calc(var(--cp-hh,28px)*.92);height:calc(var(--cp-hh,28px)*.92);margin-left:-1px}
+.cp-map{display:block;flex:none;height:var(--cp-mh,60px);background:var(--paper-d);border-radius:2px;box-shadow:0 0 0 2px var(--ink);overflow:hidden;pointer-events:none}
+.cp-map-cv{display:block;width:100%;height:100%}
+.cp-foes{flex:none;display:flex;flex-wrap:wrap;align-items:center;align-content:center;justify-content:center;gap:2px 4px;height:var(--cp-fh,32px);overflow:hidden;pointer-events:none}
+.cp-foe{display:flex;align-items:center}
+.cp-foe-icon{display:block;width:calc(var(--cp-ih,24px)*1.244);height:var(--cp-ih,24px);margin-right:calc(var(--cp-ih,24px)*-.1)}
+.cp-foes.icons .cp-foe-icon{margin-right:0}
+.cp-foe-n,.cp-foe-total{position:relative;font:800 var(--cp-cf,13px)/1 var(--font);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:1.5px 0 0 var(--card),-1.5px 0 0 var(--card),0 1.5px 0 var(--card),0 -1.5px 0 var(--card)}
+/* in a battle: the budget bar (paint spent / budget, the 3-star and 2-star lines with their stamps), the clock */
+.cp-bar{position:fixed;left:50%;top:10px;display:flex;align-items:center;gap:10px;height:50px;padding:4px 14px 4px 14px;background:var(--cloud);border:2px solid var(--ink);border-radius:var(--r-chip);pointer-events:none;z-index:16}
+html[data-ui=paint] .cp-bar{background:transparent;border:0;border-radius:0;border-image:var(--bi-chip)}
+.cp-track{position:relative;flex:1;min-width:0;height:16px;margin-top:14px;background:var(--paper-d);border:2px solid var(--ink);border-radius:var(--r-pill)}
+html[data-ui=paint] .cp-track{background:transparent;border:0;border-radius:0;border-image:var(--bi-camp-track)}
+.cp-fill{position:absolute;left:1px;top:1px;bottom:1px;width:0;max-width:calc(100% - 2px);background:var(--blue);border-radius:var(--r-pill);transition:width .12s}
+html[data-ui=paint] .cp-fill{left:0;top:-1px;bottom:-1px;background:var(--img-camp-fill) left center/auto 100% repeat-x;border-radius:9px 4px 4px 9px}
+.cp-line{position:absolute;top:-5px;bottom:-5px;width:4px;margin-left:-2px;background:var(--ink);border-radius:2px}
+.cp-line .cp-stars{position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%)}
+.cp-mini{width:15px;height:15px;margin:0 -1.5px}
+.cp-line.near.l3 .cp-stars,.cp-line.near.l3 .cp-lnum{left:auto;right:-2px;transform:none}
+.cp-line.near.l2 .cp-stars,.cp-line.near.l2 .cp-lnum{left:-2px;transform:none}
+.cp-line[hidden]{display:none}
+.cp-num-box{flex:none;font:800 17px/1 var(--font);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cp-spent{font-size:22px;color:var(--blue)}
+.cp-bar.cp-bump{animation:cp-bump .42s ease-out}
+.cp-bar.cp-bump .cp-spent{color:var(--red)}
+@keyframes cp-bump{0%{transform:translateX(0)}15%{transform:translateX(-8px) rotate(-1.2deg) scale(1.04)}35%{transform:translateX(7px) rotate(1deg) scale(1.04)}55%{transform:translateX(-5px)}75%{transform:translateX(3px)}100%{transform:translateX(0)}}
+body.piloting .cp-bar,body.camp-over .cp-bar{display:none!important}
+.cp-clock{--o:2.4px;--drop:3px 4px;position:fixed;top:var(--camp-under,66px);left:var(--camp-mid,50%);transform:translateX(-50%);z-index:16;margin:0;padding:0 6px 4px;font:800 34px/1.1 var(--font);color:var(--yellow);font-variant-numeric:tabular-nums;pointer-events:none}
+.cp-clock.last{color:var(--red);animation:cp-tick 1s ease-in-out infinite}
+@keyframes cp-tick{0%,100%{transform:translateX(-50%) scale(1)}12%{transform:translateX(-50%) scale(1.18)}}
+body.campaign #paused{top:var(--camp-under,66px)}
+body.campaign #paused:not([hidden]) ~ .cp-clock{top:calc(var(--camp-under,66px) + 40px)}
+/* prices on the unit cards (a blue paint chip: your paint), in a campaign battle */
+.tool-price{display:none}
+body.campaign .tool{position:relative}
+body.campaign .tool-price:not([hidden]){display:block;position:absolute;left:5px;right:5px;bottom:4px;padding:1px 1px 2px;background:var(--blue);border:1.5px solid var(--ink);border-radius:3px;color:var(--on-paint);font:800 10.5px/1.05 var(--font);text-align:center;white-space:nowrap;overflow:hidden;pointer-events:none}
+body.campaign .tool.priced .tool-icon,body.campaign .tool.made.tagged.priced .tool-icon,body.campaign .tool.made.tagged.priced:has(.tool-tag.two) .tool-icon{transform:translateY(-5px) scale(.86)}
+body.campaign .tool-tag{display:none!important}
+/* the result card: the field stays in sight round it; the tool bar steps aside (the army is set) */
+.cp-result{position:fixed;inset:0;z-index:35;pointer-events:none}
+.cp-rcard{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:auto}
+.cp-rpaper{position:relative;box-sizing:border-box;display:grid;width:100%;height:100%;padding:12px 16px 14px;gap:8px;background:var(--paper);border-radius:var(--r-card);box-shadow:0 4px 0 rgba(70,45,15,.45),0 14px 40px rgba(0,0,0,.35);animation:cp-in .5s cubic-bezier(.3,1.6,.6,1) both}
+html[data-ui=paint] .cp-rpaper{background:var(--img-paper) 0 0/200px 200px repeat,var(--paper);border-radius:2px}
+html[data-ui=paint] .cp-rpaper::before,html[data-ui=paint] .cp-rpaper::after{content:"";position:absolute;top:-22px;width:60px;height:50px;background:0 0/100% 100% no-repeat;pointer-events:none;z-index:1}
+html[data-ui=paint] .cp-rpaper::before{left:-22px;background-image:var(--img-tape-l)}
+html[data-ui=paint] .cp-rpaper::after{right:-22px;background-image:var(--img-tape-r)}
+@keyframes cp-in{0%{transform:scale(.3) rotate(-10deg)}60%{transform:scale(1.06) rotate(2deg)}100%{transform:scale(1) rotate(-.8deg)}}
+.cp-rcard.port .cp-rpaper{grid-template-rows:52px 74px 52px 1fr;grid-template-areas:"title" "stars" "bar" "btns"}
+.cp-rcard.land .cp-rpaper{grid-template-columns:220px 1fr;column-gap:16px;grid-template-rows:52px 1fr;grid-template-areas:"title bar" "stars btns"}
+.cp-rtitle{--o:2.6px;--drop:3px 4.5px;grid-area:title;align-self:center;margin:0;min-width:0;font:800 38px/1.1 var(--font);letter-spacing:.03em;text-transform:uppercase;text-align:center;white-space:nowrap;overflow:hidden;padding:2px 6px 6px;color:var(--yellow)}
+.cp-result.lost .cp-rtitle{color:var(--red)}
+.cp-rstars{grid-area:stars;display:flex;align-items:center;justify-content:center;gap:10px}
+.cp-rslot{position:relative;flex:none;width:62px;height:62px;background:var(--paper-d);clip-path:none}
+.cp-rslot:nth-child(2){width:70px;height:70px;margin-top:-10px}
+html[data-ui=paint] .cp-rslot{background:var(--img-star-off) center/100% 100% no-repeat}
+html:not([data-ui=paint]) .cp-rslot,html:not([data-ui=paint]) .cp-rstamp{clip-path:polygon(50% 2%,62% 36%,98% 37%,69% 59%,80% 95%,50% 74%,20% 95%,31% 59%,2% 37%,38% 36%)}
+.cp-rstamp{position:absolute;inset:-3px;background:var(--red);visibility:hidden}
+html[data-ui=paint] .cp-rstamp{background:var(--img-star-on) center/100% 100% no-repeat}
+.cp-rslot.stamped .cp-rstamp{visibility:visible;animation:cp-stamp .3s cubic-bezier(.2,.9,.3,1.25) both}
+.cp-rslot:nth-child(1) .cp-rstamp{--r:-9deg} .cp-rslot:nth-child(2) .cp-rstamp{--r:4deg} .cp-rslot:nth-child(3) .cp-rstamp{--r:11deg}
+@keyframes cp-stamp{0%{transform:scale(2.8) rotate(-30deg)}70%{transform:scale(.9) rotate(calc(var(--r) + 3deg))}100%{transform:scale(1) rotate(var(--r))}}
+.cp-rbar{grid-area:bar;display:flex;align-items:center;gap:10px;min-width:0}
+.cp-rspent{flex:none;font:800 30px/1 var(--font);color:var(--blue);font-variant-numeric:tabular-nums}
+.cp-rbar .cp-track{margin:2px 0 14px}
+.cp-lnum{position:absolute;top:calc(100% + 1px);left:50%;transform:translateX(-50%);font:800 13px/1 var(--font);color:var(--ink);white-space:nowrap}
+.cp-rbtns{grid-area:btns;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:center}
+.cp-rbtns:has(.cp-next[hidden]) .cp-retry{grid-column:span 2}
+.cp-result .big-button{min-width:0;font:800 18px/1 var(--font);letter-spacing:.03em;padding:8px 10px 11px;overflow:hidden;white-space:nowrap}
+html[data-ui=paint] .cp-result .big-button{padding:8px 10px 13px}
+body.camp-over #toolbar,body.camp-over #start{visibility:hidden!important}
+/* after START nothing can be painted: the tool bar slides down out of sight (the whole field shows; main.js setInsets),
+   and comes back with a fresh battle (Retry / Clear / Next) or Leave. `translate`, not transform: toolbar.js sets the
+   bar's transform to centre it. */
+#toolbar{transition:translate .35s ease-in}
+body.camp-locked #toolbar{translate:0 calc(100% + 40px + var(--safe-b));pointer-events:none!important}
+body.camp-locked #toolbar>*{pointer-events:none!important}
+/* the count chip (mostly the map's trees and barrels by now) sat over the field's left edge, where enemy back lines
+   stand: it slides out to the left with the bar and comes back with it */
+#counts{transition:translate .35s ease-in}
+body.camp-locked #counts{translate:calc(-100% - 30px - var(--safe-l)) 0}
+
 /* Phones on their side under 800 px (iPhone SE 667, Galaxy 740-780): side by side, each team card got 84-105 px and
    3-digit counts ("120 → 85") ran up to 19 px past its edge. The two cards stack in their column (OG stacks them on phones). */
 @media (max-height:500px) and (min-width:600px) and (max-width:799px){
@@ -987,6 +1186,9 @@ html:not([data-ui=paint]) .mk-pico.none::before{content:"\2205";font:800 22px/1 
   html[data-ui=paint] #teams[aria-checked=true]{background-image:var(--img-ico-teams),var(--img-round-on)}
   html[data-ui=paint] #teams .team-icon{display:none}
   #controls{flex-direction:column;top:calc(var(--top-controls) + var(--safe-t))}
+  /* STEP10 LEAD: 10 round buttons ran into the tool bar at 320x568: a grid of columns that fills from the right */
+  #controls{display:grid;grid-auto-flow:column;grid-template-rows:repeat(auto-fill,var(--round));direction:rtl;max-height:calc(100vh - var(--top-controls) - var(--safe-t) - var(--bar-h) - var(--tabs-h) - var(--safe-b) - 12px);max-height:calc(100dvh - var(--top-controls) - var(--safe-t) - var(--bar-h) - var(--tabs-h) - var(--safe-b) - 12px)}
+  #controls>*{direction:ltr}
   .team-label.left{left:var(--lab-pl,calc(var(--mid-x,calc(var(--field-l) + var(--field-w)/2)) - 9px));transform:translateX(-100%)}
   .team-label.right{left:var(--lab-pr,calc(var(--mid-x,calc(var(--field-l) + var(--field-w)/2)) + 9px));transform:none}
 }
@@ -994,6 +1196,7 @@ html:not([data-ui=paint]) .mk-pico.none::before{content:"\2205";font:800 22px/1 
    screen, 4 over the tool bar). A row along the top instead, as on desktop; Team battle stays under its right end. */
 @media (max-width:640px) and (max-height:507px){
   #controls{flex-direction:row;top:calc(10px + var(--safe-t))}
+  #controls{display:flex;direction:ltr;max-height:none}   /* STEP10 LEAD: undo the upright grid */
 }
 /* first-visit hand (ui/intro.js) */
 .intro-hand{position:fixed;left:0;top:0;z-index:60;pointer-events:none;transform-origin:37% 5%;filter:drop-shadow(0 3px 2px rgba(43,33,24,.35));will-change:transform,opacity}
@@ -1026,7 +1229,11 @@ html:not([data-ui=paint]) .mk-pico.none::before{content:"\2205";font:800 22px/1 
     </div>
   </div>
   <div id="controls">
+    <!-- STEP9 UI: the campaign panel (a flag), leave a campaign battle (out of the door) -->
+    <button id="campaign-button" class="round-button" type="button" aria-expanded="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V3.5M6 4.5c4-2 7.5 2 12 0v8c-4.5 2-8-2-12 0"/></svg></button>
+    <button id="leave-button" class="round-button" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 4H5.5v16H13M10 12h10M16.5 8.5L20 12l-3.5 3.5"/></svg></button>
     <button id="maps-button" class="round-button" type="button" aria-expanded="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 6.5L8.6 4.3l6.8 2.2 6.1-2.2v13.4l-6.1 2.2-6.8-2.2-6.1 2.2zM8.6 4.3v13.4M15.4 6.5v13.4"/><path d="M16.6 8l3 3M19.6 8l-3 3"/></svg></button>
+    <button id="share-button" class="round-button" type="button" aria-expanded="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="17.6" cy="5.6" r="2.7"/><circle cx="6.2" cy="12" r="2.7"/><circle cx="17.6" cy="18.4" r="2.7"/><path d="M8.6 10.7l6.6-3.8M8.6 13.3l6.6 3.8"/></svg></button>
     <button id="clear" class="round-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9.5 7l.5-2.5h4l.5 2.5M7 7l1 13h8l1-13M10.5 10.5l.3 6M13.5 10.5l-.3 6"/></svg></button>
     <button id="pause" class="round-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><g class="bars"><path d="M9 6.5v11M15 6.5v11"/></g><g class="play"><path d="M8.5 5.8v12.4l10-6.2z"/></g></svg></button>
     <button id="sound" class="round-button" type="button" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><g class="waves"><path d="M15.2 9.2a4 4 0 0 1 0 5.6"/><path d="M17.8 6.6a7.6 7.6 0 0 1 0 10.8"/></g><g class="cross"><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></g></svg></button>

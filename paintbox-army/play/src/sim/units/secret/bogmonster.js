@@ -39,12 +39,15 @@ const T = {
   wait: 4,            // ... is put off this long while it lies in wait for its target
   sight: 360,         // px
   shrug: 0.4,        // s: shrugs off stuns this short (ours: mixed armies kept it knocked down for good)
+  upTime: 0.9,        // s it stays up out of its bog to punch a foe too big to grab (ATTACK3 L3)
 };
 const UNDER = 1, GRAB = 2;   // subState
 
 function goUnder(w, u) { const b = u.b; b.under = 1; u.hidden = 0.001; u.burning = 0; if (u.subState === 0) u.subState = UNDER; if (b.act !== 2) act(w, u, 1); }
 function surface(w, u) { const b = u.b; b.under = 0; u.hidden = 0; b.wait = 0; if (u.subState === UNDER) u.subState = 0; if (b.act === 1) act(w, u, 0); }
 function okGrab(u, o) { return grabbable(o, T.grabMass) && !high(o); }
+/** Never grabbable, whatever happens (heavy, a boss, untossable): it rises and punches those instead (ATTACK3 L3). */
+function tooBig(o) { return o.mass > T.grabMass || !!o.def.boss || !!o.def.untossable; }
 
 function startGrab(w, u, v) {
   const b = u.b;
@@ -86,7 +89,14 @@ function brain(w, u) {
   u.goalX = 0; u.goalY = 0; u.face = NaN;
   actDone(w, u, 3, 0.4);
   if (u.subState === GRAB) { setState(u, STATE.ENGAGE); return; }   // carry() holds; it sits still dragging it under
-  const lurk = lurkable(w, u.x, u.y);
+  let lurk = lurkable(w, u.x, u.y) && !(now < b.upT);
+  // ATTACK3 L3: a foe too big to drag under, right on top of it: it rises out of the bog and punches (up T.upTime s,
+  // hittable). Under, it only grabbed: it followed a giant round the field in its own mud trail for the rest of the
+  // battle, neither of them ever landing a blow (the giant can't see it under).
+  if (lurk && u.cooldown <= 0 && !(u.stun > T.shrug) && canAuto(w, u)) {
+    const t0 = targetOf(w, u);
+    if (t0 && tooBig(t0) && inReach(t0) && hypot(t0.x - u.x, t0.y - u.y) <= u.radius + t0.radius + T.reach + 4) { b.upT = now + T.upTime; lurk = false; }
+  }
   if (lurk) goUnder(w, u); else surface(w, u);
   if (u.state === STATE.FLEE) setState(u, STATE.IDLE);
   if (u.stun > T.shrug) { u.face = u.heading; return; }   // too heavy to be stun-locked by small knocks (cavalry, blows)
@@ -142,7 +152,7 @@ secret({
   flock: { separation: 36, formation: 0.3 },
   morale: FEARLESS,
   look: { attack: { time: 0.4 } },
-  init(w, u) { initBag(u); u.b.under = 0; u.b.wait = 0; u.b.next3 = w.time + T.trailEvery * w.rng(); },
+  init(w, u) { initBag(u); u.b.under = 0; u.b.wait = 0; u.b.upT = 0; u.b.next3 = w.time + T.trailEvery * w.rng(); },
   // under the mud / water: nothing hurts it and shots pass (combat/env.js submerged asks this)
   underground(u) { return u.b.under === 1; },
   damageMul(w, u) { return u.b.under === 1 ? 0 : 1; },

@@ -542,6 +542,12 @@ function raising(world) {
 // and 0.6 s after it stopped), it is painted into the ground layer for good (GROUND.stampBody) and no longer drawn live.
 // Held bodies (necro kept, ants, rats) stay live as in OG. Clear wipes the ground.
 const stamped = new WeakSet(), bodyS = new WeakMap();   // corpse -> { rot, landT, flew, last }
+// Attack 4 (L4): a made unit edited or deleted while its bodies still lie live (not yet painted into the ground): they
+// were drawn from the type's entry, so after forgetType they turned into the NEW recipe (a dead person became a dead
+// beast) or, deleted, into the grey blob, and were painted into the ground like that. Now each such body keeps the
+// entry it died with (pinned at forgetType; the old entry still paints its own recipe).
+const pinned = new WeakMap();   // corpse -> { ent, risen }
+const corpseEnt = (c) => pinned.get(c) || SP.entOf(c.type);
 const SETTLE = 0.6;
 function visibleBody(c, now) {
   const age = now - (c.t ?? c.time ?? 0);
@@ -560,12 +566,12 @@ function drawCorpses(world) {
     if (!c) continue;
     const ageR = NOW - (c.t ?? c.time ?? 0);
     if (stamped.has(c)) {   // painted into the ground: only its last flames (OG writeBody fade, 1.1 s)
-      if (c.burning && ageR < FADE1 && visibleBody(c, NOW)) { const ft = 1 - ageR / FADE1, te = SP.entOf(c.type), kz = Math.min(1.7, Math.max(0.55, (c.r || te.ent.defR) / te.ent.defR)) * te.ent.scale; ctx.globalAlpha = ft * (235 / 255); FX.fireOn(c.x, c.y + 2, Math.max(0.5, kz * 0.8) * (0.4 + 0.6 * ft), (c.t || 0) + ageR, ((c.id || j) * 0.13) % 1, false); ctx.globalAlpha = 1; }
+      if (c.burning && ageR < FADE1 && visibleBody(c, NOW)) { const ft = 1 - ageR / FADE1, te = corpseEnt(c), kz = Math.min(1.7, Math.max(0.55, (c.r || te.ent.defR) / te.ent.defR)) * te.ent.scale; ctx.globalAlpha = ft * (235 / 255); FX.fireOn(c.x, c.y + 2, Math.max(0.5, kz * 0.8) * (0.4 + 0.6 * ft), (c.t || 0) + ageR, ((c.id || j) * 0.13) % 1, false); ctx.globalAlpha = 1; }
       continue;
     }
     if (!visibleBody(c, NOW)) continue;
     const a = meatAlpha(c);
-    const te = SP.entOf(c.type), ent = te.ent;
+    const te = corpseEnt(c), ent = te.ent;
     if (ent.drawUnit && c.shape === 'snake') continue;
     let col = colIdOf(c.team); const dead = c.burning ? 2 : 1, v = boilV(RT, ((c.id || j) * 0.37) % 1);
     if (c.type === 'frog' && c.curseType) col = SP.colId(SP.entOf(c.curseType).ent.own);   // as the living frog (OG game.js:22087)
@@ -759,7 +765,14 @@ function layerScale(W, H, S) {
 }
 export function handleEvents(events, world) { if (events && events.length) FX.handleEvents(events, world); }
 // STEP8 (lead): a made unit's recipe changed or it was deleted: its look is built again from the new recipe.
-export function forgetType(type) { SP.dropType(type); }
+export function forgetType(type) {
+  const base = typeof type === 'string' && type.startsWith('risen_') ? type.slice(6) : type, list = info.world && info.world.corpses;
+  if (list) for (const c of list) {   // attack 4 (L4): bodies still drawn live keep the entry they died with
+    if (!c || stamped.has(c) || pinned.has(c) || (c.type !== base && c.type !== 'risen_' + base)) continue;
+    const te = SP.entIf(c.type); if (te) pinned.set(c, te);
+  }
+  SP.dropType(type);
+}
 export function clear() { GROUND.clear(); FX.clear(); TER.reset(); easing.clear(); RIG.reset(); }
 
 // Types a tool also brings onto the field (spawned by the sim).
@@ -767,13 +780,26 @@ const SPAWNS = { cavalry: ['knight', 'horse'], ant: ['soldierant', 'anthill'], n
   // STEP4: crews and passengers spawned by machines
   ram: ['siegecrew'], catapult: ['siegecrew'], ballista: ['siegecrew'], siegetower: ['halberd'], cannon: ['gunner'], ship: ['deckhand'],
   // STEP6
-  beehive: ['bee'], kingslime: ['bigslime', 'slimelet'] };
+  beehive: ['bee'], kingslime: ['bigslime', 'slimelet'],
+  scarecrow: ['crow'] };   // attack 4 (L4): the scarecrow's crows were never prewarmed (first crow baked inside a frame)
+// Attack 4 (L4): helpers a made unit's abilities spawn (sim/maker/abilities/support-life.js: Bees, Crows, Raise), read
+// from its def. They come out at once (bees, crows) or as soon as bodies lie near (raise), long before a busy battle's
+// queue reaches them: the first bee / crow / skeleton of a made unit baked inside the frame it rose (CNT.sync, 13-15 ms
+// at 4x CPU). Now prewarmed like SPAWNS, and one frame of each is baked at the pick if the type has none yet.
+const MADE_SPAWNS = { bees: 'bee', crows: 'crow', raise: 'skeleton' };
+function madeSpawns(type) {
+  const out = [], d = getDef(type), mk = d && d.maker;
+  if (mk && Array.isArray(mk.abs)) for (const a of mk.abs) if (a && MADE_SPAWNS[a.id] && !out.includes(MADE_SPAWNS[a.id])) out.push(MADE_SPAWNS[a.id]);
+  return out;
+}
 let pendingPrewarm = null;
 export function prewarm(tool, teams) {
   if (!S) { pendingPrewarm = [tool, teams]; return; }   // picked before the first frame: run it then
   if (!tool || tool.kind !== 'unit') return;
-  const types = [tool.type].concat(SPAWNS[tool.type] || []);
+  const helpers = madeSpawns(tool.type);
+  const types = [tool.type].concat(SPAWNS[tool.type] || [], helpers);
   const cols = teams ? [1, 2] : [0];
+  for (const type of helpers) { const { ent, risen } = SP.entOf(type); if (!SP.fallback(ent.id)) SP.getNow(SP.key(ent.id, cols[0], 0, 0, 0, risen)); }
   // boil variant 0 of every pose first (the unit looks right at once), then the other two variants, then extras + dead
   for (const type of types) {
     const { ent, risen } = SP.entOf(type);

@@ -5,6 +5,7 @@ import {
   S, fac, LOCO, INTEL, hyp, signed, range, rint, setState, getTarget, setTarget, perchOf, hostile, isUndead, ensure, hitAnim,
   dmg, push, toss, infect, sfx, hasWalls, hasWater, wetAt, nearestWet, lineOfSight, gField, gSet, goTo, flee, roam, trample, startled,
 } from './lib.js';
+import { reinGoal } from '../army/cavalry.js'; // OURS (attack 3, 11-18): same rein-round as Cavalry (cavalry.js REIN)
 
 const FULL_SPEED = 255; // OG game.js:17950
 const GORE_MIN_SPEED = 112.5; // OG game.js:17951
@@ -33,6 +34,13 @@ const BITE = 14; // OG game.js:18172
 const BITE_COOLDOWN = 0.75; // OG game.js:18178
 const ALERT_CREEP = 6; // OG game.js:18088
 const FLANK_GAP = 90; // OG game.js:18122
+// OURS (attack 3, 11-18, boar circling an archer / rifleman for good): a boar that charges a target close by and off its
+// nose runs round it at ~100 px/s, 40-45 px centre to centre: too slow to gore (112.5), too far to bite (r + r + 4), and
+// the vehicle mover can't turn tighter at that speed (6 / (1 + v / 56.25) rad/s). Archers and riflemen back off round
+// it, so neither side ever lands a hit (lone boar v lone archer: both alive at 90 s in 4/10 OG runs, 6/10 ours). Fix:
+// inside REIN_NEAR (centre gap past touching) a target more than REIN.angle off the nose = rein round first (brake and
+// turn at the standing rate, cavalry.js reinGoal), then the OG charge runs straight in. Further out the OG arcs stay.
+const REIN_NEAR = 120;
 const propsFaction = fac('Props');
 const notProp = (o) => o.faction !== propsFaction; // mask S: every faction but Props (OG game.js:17952)
 const wet = new Float32Array(2);
@@ -117,9 +125,11 @@ function charge(w, u, e) { // OG game.js:18136-18186
     if (w.time < u.b.timer) { u.goalX = -dx / d * u.def.runSpeed; u.goalY = -dy / d * u.def.runSpeed; goreIfFast(w, u); return; }
     u.subState = 0;
   }
-  const lead = Math.min(d / FULL_SPEED, 0.5); // OG game.js:18156
-  const ax = dx + e.vx * lead, ay = dy + e.vy * lead, ad = hyp(ax, ay) || 0.001;
-  u.goalX = ax / ad * FULL_SPEED; u.goalY = ay / ad * FULL_SPEED; // OG game.js:18160
+  if (u.possessed === 1 || d > REIN_NEAR + u.radius + e.radius || !reinGoal(u, dx, dy, u.def.walkSpeed)) { // OURS: close + off the nose → rein round (REIN_NEAR above)
+    const lead = Math.min(d / FULL_SPEED, 0.5); // OG game.js:18156
+    const ax = dx + e.vx * lead, ay = dy + e.vy * lead, ad = hyp(ax, ay) || 0.001;
+    u.goalX = ax / ad * FULL_SPEED; u.goalY = ay / ad * FULL_SPEED; // OG game.js:18160
+  }
   const sp = hyp(u.vx, u.vy);
   if (sp >= GORE_MIN_SPEED) trample(w, u, sp, GORE);
   else if (u.cooldown <= 0) bite(w, u, e);

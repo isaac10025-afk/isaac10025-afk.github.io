@@ -41,6 +41,9 @@ const T = {
     hatChance: 0.4, // hats fly
     noiseRadius: 300, // px
   },
+  friendGap: 14, // attack 3 (11-18): no salvo with an own-side unit within blast radius + 14 of the aim (OG grenadier: + 8).
+  // Salvos used to go off into its own line whenever the target stood among them (5 mechs v a dragon diving on them: ~800 hp
+  // of own mech lost to its own rockets)
   stompReach: 20, // px past both radii: an enemy this close gets stomped
   stompEvery: 2, // s between stomps
   stompLift: 0.25, // s the foot is up before it lands
@@ -91,6 +94,9 @@ function fireRocket(world, u) {
   u.attack = 1; u.firedAt = world.time;
   b.salvo--; b.next = world.time + T.gap;
 }
+let _fu = null, _fh = false;
+function friendOne(o) { if (!_fh && o !== _fu && o.hp > 0 && o.faction === _fu.faction && !o.def.prop) { _fh = true; return true; } }
+function friendNear(world, u, x, y) { _fu = u; _fh = false; world.query(x, y, BLAST.radius + T.friendGap, friendOne); _fu = null; return _fh; }
 function startSalvo(world, u, ax, ay) {
   const b = u.b;
   b.salvo = T.salvo; b.next = world.time; b.ax = ax; b.ay = ay; b.reloadAt = world.time + T.reload;
@@ -170,7 +176,10 @@ function brain(world, u) {
   const t = targetOf(world, u);
   if (!t) { idle(world, u); return; }
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
-  if (may && b.salvo <= 0 && world.time >= b.reloadAt && d >= T.rangeMin && d <= T.rangeMax && losClear(world, u)) startSalvo(world, u, t.x, t.y);
+  if (may && b.salvo <= 0 && world.time >= b.reloadAt && d >= T.rangeMin && d <= T.rangeMax && losClear(world, u) && (u.possessed === 1 || !friendNear(world, u, t.x, t.y))) startSalvo(world, u, t.x, t.y);
+  // attack 4 lead: a high flyer (UFO, dragon) inside rocket range can't be stomped either: the mech used to run in under it
+  // and stand there with nothing it could do (UFO v mech never ended). It steps back out to rocket range instead.
+  if (d < T.rangeMin && !touchable(t) && losClear(world, u)) { setState(u, STATE.ENGAGE); u.face = Math.atan2(dy, dx); u.goalX = (-dx / d) * T.run; u.goalY = (-dy / d) * T.run; return; }
   if (d > T.rangeMax * 0.9 || d < T.rangeMin || !losClear(world, u)) { closeOn(world, u, t, dx, dy, d < T.rangeMin ? T.run : T.walk); if (d < T.rangeMin) setState(u, STATE.CHARGE); }
   else { setState(u, STATE.ENGAGE); u.face = Math.atan2(dy, dx); u.goalX = (dx / d) * T.walk * 0.5; u.goalY = (dy / d) * T.walk * 0.5; }
 }

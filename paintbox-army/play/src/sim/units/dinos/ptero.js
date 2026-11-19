@@ -30,6 +30,9 @@ const T = {
   landHit: 20,        // whoever it lands on: damage (+ knocked down)
   grabEvery: 3,       // s between dives
   peck: 12,           // dive-peck damage when there's nothing to grab
+  peckEvery: 1.3,     // s between dive-pecks (a grab dive waits grabEvery). attack 3 (11-18): pecks waited the 3 s of a grab, so
+                      // against anything too heavy or never alone (cavalry, a giant, a legion block) it circled 3 s per 12 hp
+                      // and the fight never ended (ptero v giant / cavalry 1v1, 5 ptero v 19 legion: still going at 60-90 s)
   airPeckEvery: 0.8,  // s between pecks at another flyer
   dropAt: 0.5,        // shot below this hp fraction while carrying: drops the victim
   circleR: 90,        // px: circles its target this far out between dives
@@ -115,7 +118,7 @@ function dive(w, u) {
   u.subState = 0; b.prey = -1; b.next = now + T.grabEvery; act(w, u, 0);
   if (!v || hypot(v.x - u.x, v.y - u.y) > u.radius + v.radius + T.grabReach || !grounded(v) || v.def.prop) return;
   const grab = (b.k === 1 || u.possessed === 1) && grabbable(v, T.grabMass);
-  if (!grab) { chew(w, u, v, T.peck); u.attack = 1; return; }
+  if (!grab) { chew(w, u, v, T.peck); u.attack = 1; b.next = now + T.peckEvery; return; }
   u.subState = CARRY; b.victim = v.id; b.t0 = now; v.hurled = 1;
   // its own side: its team's half in Team battle, else back where it was painted, else straight away
   let hx = u.team === 0 ? -1 : u.team === 1 ? 1 : u.homeX - u.x, hy = u.team >= 0 ? 0 : u.homeY - u.y;

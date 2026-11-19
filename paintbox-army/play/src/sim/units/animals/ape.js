@@ -7,7 +7,7 @@ import { hooks } from '../../combat/env.js';
 import { NOISE_LAYER } from '../../world.js';
 import {
   S, DT, fac, LOCO, INTEL, MAX_R, GRAVITY, signed, range, hyp, setState, getTarget, unit, airborne, perchOf,
-  isUndead, ensure, hitAnim, dmg, push, infect, sfx, hasWalls, followIntel, flee, roam, goTo, nearestHorse,
+  isUndead, ensure, hitAnim, dmg, push, infect, sfx, hasWalls, followIntel, flee, roam, goTo, nearestHorse, lineOfSight,
 } from './lib.js';
 
 // subStates (OG game.js:13952-13956)
@@ -170,7 +170,7 @@ function brain(w, u) {
   // ride a loose horse within 260 px when the target is > 120 px away (OG game.js:14224-14227)
   if (!undead && L > 120) {
     const h = nearestHorse(w, u.x, u.y, 260);
-    if (h) { u.subState = SEEK_HORSE; u.lastVictim = h.id; if (seekHorse(w, u, tgt)) return; }
+    if (h && !(hasWalls(w) && !lineOfSight(w, u.x, u.y, h.x, h.y))) { u.subState = SEEK_HORSE; u.lastVictim = h.id; if (seekHorse(w, u, tgt)) return; } // OURS (attack 3): a horse it can see (army/sniper.js TREE_LOS)
   }
   if (!tgt) { // OG game.js:14228-14231
     if (followIntel(w, u, WALK, 5)) return;
@@ -291,9 +291,11 @@ function throwable(u, v) {
 function pickThrowable(w, u) { // OG game.js:14236-14250
   const list = gather(w, u.x, u.y, u.radius + 90 + MAX_R);
   let best = null, bs = -Infinity;
+  const walled = hasWalls(w);
   for (let k = 0; k < list.length; k++) {
     const v = list[k];
     if (v === u || v.dead || !throwable(u, v)) continue;
+    if (walled && !lineOfSight(w, u.x, u.y, v.x, v.y)) continue; // OURS (attack 3): something it can reach (army/sniper.js TREE_LOS)
     const gap = hyp(v.x - u.x, v.y - u.y) - u.radius - v.radius;
     if (gap > 90) continue;
     const s = (v.type === 'barrel' ? 2 : 0) - 0.01 * gap; // OG game.js:14246
@@ -304,6 +306,7 @@ function pickThrowable(w, u) { // OG game.js:14236-14250
 function seekThrowable(w, u, tgt) { // OG $ (game.js:14290-14304)
   const v = unit(w, u.lastVictim);
   if (!tgt || !v || !throwable(u, v) || enemyNear(w, u, 60)) { u.subState = 0; return false; }
+  if (hasWalls(w) && !lineOfSight(w, u.x, u.y, v.x, v.y)) { u.subState = 0; return false; } // OURS (attack 3): TREE_LOS
   const ox = v.x - u.x, oy = v.y - u.y, l = hyp(ox, oy) || 0.001;
   if (l > u.radius + v.radius + 4) {
     setState(u, S.ADVANCE);
@@ -357,6 +360,7 @@ function drop(w, u) { // OG nt (game.js:14347-14351)
 function seekHorse(w, u, tgt) {
   const h = unit(w, u.lastVictim);
   if ((tgt && dist(u, tgt) < 120) || !h || h.type !== 'horse' || h.hp <= 0 || h.burning > 0) { u.subState = 0; return false; }
+  if (hasWalls(w) && !lineOfSight(w, u.x, u.y, h.x, h.y)) { u.subState = 0; return false; } // OURS (attack 3): TREE_LOS
   const ox = h.x - u.x, oy = h.y - u.y, c = hyp(ox, oy) || 0.001;
   if (c > u.radius + h.radius + 4) {
     setState(u, S.ADVANCE);
@@ -415,8 +419,10 @@ function tryClaimTree(w, u, tgt) {
   if (u.state === S.FLEE || u.burning > 0 || u.stun > 0 || airborne(u) || u.b.rage > w.time) return; // OG game.js:14098-14104
   if (tgt && dist(u, tgt) < 220) return; // OG game.js:14106
   let best = null, bd = Infinity;
+  const walled = hasWalls(w);
   w.query(u.x, u.y, u.radius + 170, (o) => { // OG game.js:14107
     if (!freeTree(w, o, u)) return;
+    if (walled && !lineOfSight(w, u.x, u.y, o.x, o.y)) return; // OURS (attack 3): a tree it can see (sniper.js TREE_LOS)
     const d = dist(u, o); if (d < bd) { bd = d; best = o; }
   }, 1 << fac('Props'));
   if (!best) return;
@@ -432,6 +438,7 @@ function treeStep(w, u, tgt) {
   if (y === 0 && u.b.timer >= 0) { // walking to the trunk (OG game.js:14400-14419)
     const rx = fx - u.x, ry = fy - u.y, l = hyp(rx, ry) || 0.001;
     if (!ok || u.burning > 0 || u.state === S.FLEE || (tgt && dist(u, tgt) < 110)) { u.perch = -1; return false; }
+    if (tree && hasWalls(w) && !lineOfSight(w, u.x, u.y, tree.x, tree.y)) { u.perch = -1; return false; } // OURS (attack 3): sniper.js TREE_LOS
     if (l > u.radius + tr + 6) {
       setState(u, S.ADVANCE);
       u.goalX = rx / l * WALK; u.goalY = ry / l * WALK; u.face = Math.atan2(ry, rx);

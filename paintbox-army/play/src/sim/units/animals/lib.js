@@ -5,6 +5,7 @@ import * as C from '../../const.js';
 import * as FAC from '../../factions.js';
 import * as CB from '../../combat/index.js';
 import * as FIRE from '../../combat/fire.js';
+import { fleeOpen } from '../../combat/status.js'; // OURS (attack 3): FLEE_WALL
 import * as NAV from '../../systems/navigation.js';
 import * as TW from '../../terrain/water.js';
 import * as TWALL from '../../terrain/wall.js';
@@ -132,8 +133,15 @@ export function wetAt(w, u) {
   if (!hasWater(w) || u.z > 0 || climbing(u)) return false;
   return (u.def.aquatic ? depthUnder(w, u.x, u.y) : depthAt(w, u.x, u.y)) >= WET;
 }
-// nearest wet tile centre within r (ring scan, OG game.js:9835-9863). Writes out[0], out[1].
+// OURS (attack 3, 11-18): WATER_LOS. Water behind a wall doesn't count: units walked to the nearest wet tile in a straight
+// line (a wounded boar to wallow, a burning unit to put itself out, a loose horse to drink), so on the step-7 maps (castle
+// moat, village pond) one stood pressed into the wall between it and the water for good (castle: a boar 20 s and on).
+// OG does the same; its painted fields rarely put a wall between a unit and the water that close.
 export function nearestWet(w, x, y, r, out) {
+  return nearestWetRaw(w, x, y, r, out) && (!hasWalls(w) || lineOfSight(w, x, y, out[0], out[1]));
+}
+// nearest wet tile centre within r (ring scan, OG game.js:9835-9863). Writes out[0], out[1].
+function nearestWetRaw(w, x, y, r, out) {
   if (TW.nearestWet) return TW.nearestWet(w, x, y, r, out);
   if (w.nearestWet) return w.nearestWet(x, y, r, out);
   if (!hasWater(w)) return false;
@@ -271,7 +279,7 @@ export function flee(w, u, threat, speed) {
   const E = 90; // OG game.js:9204
   if (u.x < E) hx += (E - u.x) / E; else if (u.x > w.W - E) hx -= (u.x - (w.W - E)) / E;
   if (u.y < E) hy += (E - u.y) / E; else if (u.y > w.H - E) hy -= (u.y - (w.H - E)) / E;
-  d = hyp(hx, hy) || 1; u.goalX = hx / d * speed; u.goalY = hy / d * speed;
+  d = hyp(hx, hy) || 1; fleeOpen(w, u, hx / d, hy / d, fleeOut); u.goalX = fleeOut[0] * speed; u.goalY = fleeOut[1] * speed; // OURS (attack 3): combat/status.js FLEE_WALL
 }
 const roamBuf = new Array(24).fill(null);
 // rest/roam cycle (OG 510.a, game.js:11155-11193). crowd = neighbour radius.

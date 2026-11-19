@@ -143,12 +143,22 @@ export function entOf(type) {
   return r;
 }
 export function sources() { return Object.keys(SRC); }
+/** The entry a type already has (null if it was never drawn): entOf without building one. Attack 4 (L4). */
+export function entIf(type) { return BY_TYPE.get(type) || null; }
 // STEP8 (lead): forget a made type's entry (its recipe changed or it was deleted): the next entOf builds it again from
 // MINE.entry. Its old bakes keep their old entry id and age out of the atlas like any unused sprite.
+// Attack 4 (L4): its keys still waiting in the bake queue are dropped too. An edit soon after a pick left the old
+// recipe's queued keys (prewarm + what its fighting copies wanted: ~300 a made unit after a Team battle) in front of
+// the new recipe's, so the edited unit drew its stiff whole idle sprite (no floppy parts) while the queue baked pictures
+// nobody draws any more (3 edits: 898 of 2002 queued keys; 6 edits: 1746 of 2823). Bodies that keep the old entry
+// (index.js forgetType) queue what they need again.
 export function dropType(type) {
-  const base = typeof type === 'string' && type.startsWith('risen_') ? type.slice(6) : type;
-  for (const e of ENTS) if (e.type === base) e.type = '\u0000dropped';
+  const base = typeof type === 'string' && type.startsWith('risen_') ? type.slice(6) : type, gone = new Set();
+  for (const e of ENTS) if (e.type === base) { e.type = '\u0000dropped'; gone.add(e.id); }
   BY_TYPE.delete(base); BY_TYPE.delete('risen_' + base);
+  if (!gone.size) return;
+  const keep = (k) => { if (!gone.has(Math.floor(k / KEY_ENT))) return true; queued.delete(k); return false; };
+  for (const q of [hi, lo]) { let n = 0; for (let i = 0; i < q.length; i++) if (keep(q[i])) q[n++] = q[i]; q.length = n; }
 }
 
 // ---------------------------------------------------------------- atlas
@@ -232,6 +242,7 @@ export function stats() { return { pages: pages.length, sprites: sprites.size, q
 // col: 0 own, 1 red (left team), 2 blue (right team), 3..15 extra colours (colId(str), e.g. a frog's cap).
 // dead: 0 alive, 1 'dead', 2 'burnt'. risen: 0, 1 zombie copy, 2 skeleton copy ('bone'). bare: hat knocked off / fur
 // singed (o.hatless = o.singed = o.bare). kindled: archer fire arrows.
+const KEY_ENT = 16 * 64 * 3 * 3 * 3 * 2 * 2;   // keys per entry (key() below): entry id = floor(key / KEY_ENT)
 export function key(entId, col, pose, v, dead, risen, bare = 0, kindled = 0) {
   return ((((((entId * 16 + col) * 64 + pose) * 3 + v) * 3 + dead) * 3 + risen) * 2 + bare) * 2 + kindled;
 }

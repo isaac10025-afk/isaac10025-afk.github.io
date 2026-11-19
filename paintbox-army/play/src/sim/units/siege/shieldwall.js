@@ -37,6 +37,10 @@ const JAB = Object.freeze({
   facing: 0.6,
   circle: 0.4,         // a wall barely circles
   press: 70,           // px: in contact, a drilled block presses at an enemy this close
+  close: 150,          // px: out of contact, a man whose own target is this close steps out of the march and walks straight
+                       // at it. attack 3 (11-18): the block marched in step along its front only, so a rifleman backing off at
+                       // 45 px/s stayed ahead of it, and once he was cornered the block jammed against the field edge 80-100 px
+                       // short (81 shields v 1 rifleman: never ended, every seed)
   memory: 5,
 });
 const BRACE = Object.freeze({
@@ -96,15 +100,16 @@ function brain(world, u) {
       act(world, u, 0);
       A.setState(u, S.ENGAGE); A.markEngaged(world, g);
       u.face = Math.atan2(dy, dx);
-      if (d > reach) { u.goalX = (dx / d) * D.walkSpeed * JAB.approach; u.goalY = (dy / d) * D.walkSpeed * JAB.approach; }
+      if (d > reach) { u.goalX = (dx / d) * D.walkSpeed * JAB.approach; u.goalY = (dy / d) * D.walkSpeed * JAB.approach; u.pathing = 1; }   // attack 3: the slot pull out-pulled this step in: men stood 1-10 px short of reach for good
       else jab(world, u, t, dx, dy, d);
       A.circle(u, t, dx, dy, d, D, JAB.circle, true);
       A.oddsPush(world, u, t, dx, dy, d, D);
       return;
     }
-    if (!drilled || (G.inContact[g] === 1 && d < JAB.press) || u.possessed === 1) {   // press in behind the shield
+    if (!drilled || (G.inContact[g] === 1 && d < JAB.press) || d < JAB.close || u.possessed === 1) {   // press in behind the shield
       act(world, u, 0);
       A.advance(world, u, t, dx, dy, A.hasLos(world, u), D.walkSpeed);
+      u.pathing = 1;   // attack 3: out of the formation pull while pressing (the slot pull, capped at the walk speed, cancelled the press)
       return;
     }
   }

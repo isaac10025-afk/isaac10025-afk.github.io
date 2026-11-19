@@ -22,7 +22,7 @@ import { tossable, tossTo, flung, KNOCK, hittable as shotHits, ownerOf, stat, gr
 import { crowdTarget, touchable } from '../../units/robots/_lib.js';
 import { T as BATTER } from '../../units/sports/batter.js';
 import {
-  ACT, M, NEAR, used, power, scale, heavy, signed, pose, unpose, close, fight, empty, airborne, reachable,
+  ACT, M, NEAR, used, power, scale, heavy, signed, pose, unpose, close, fight, empty, airborne, lowFlyer, reachable,
 } from './melee-lib.js';
 
 const TAU = Math.PI * 2;
@@ -465,7 +465,7 @@ registerWeapon({
   },
   tick(w, u, bag) {
     ramCycle(w, u, bag);
-    if (!(u.stun > 0) && !airborne(u) && u.hp > 0) ramShove(w, u, bag);
+    if (!(u.stun > 0) && (!airborne(u) || lowFlyer(u)) && u.hp > 0) ramShove(w, u, bag);   // ATTACK3 L4: a flyer shoves at the bottom of its dive
   },
   // no one in sight: the group's fight / last word of the enemy (the ram's objective()); a wall in the way gets knocked down
   idle(w, u, bag) {

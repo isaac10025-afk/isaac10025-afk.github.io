@@ -60,6 +60,10 @@ function brain(w, u) {
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001, a = Math.atan2(dy, dx);
   if (now >= b.next && d <= u.radius + t.radius + T.clubReach + T.tailTurn) { // swing the tail round to it
     setState(u, STATE.ENGAGE); u.face = a + Math.PI;
+    // attack 3 (11-18): ... and back up to it, tail first. It used to stand still with its tail out: anyone standing in the
+    // 30 px past the club's reach (a rifleman backing off, an archer) was never clubbed or butted (ankylo v rifle /
+    // archer / legion 1v1: still going at 60 s)
+    if (d > u.radius + t.radius + T.clubReach - 6) { u.goalX = dx / d * T.walk; u.goalY = dy / d * T.walk; }
     return;
   }
   if (d <= u.radius + t.radius + 5) {

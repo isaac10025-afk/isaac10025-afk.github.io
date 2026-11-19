@@ -2,8 +2,8 @@
 // native bridge sets window.Capacitor); the web build never imports it. Talks to the native side through the bridge
 // itself (Capacitor.addListener / nativePromise), so no Capacitor JS has to ship with the game.
 //
-// Android Back, top-most first: close the Found card -> the maps panel -> the report -> leave the possessed unit ->
-// stop following -> send the app to the background (attack 11-16: the panel and the card were missing, so Back did
+// Android Back, top-most first: close the Found card -> the maps panel -> (STEP9 UI) the campaign panel -> the report ->
+// leave the possessed unit -> stop following -> (STEP9 UI) leave a campaign battle -> send the app to the background (attack 11-16: the panel and the card were missing, so Back did
 // nothing for 3 s and then sent the app away with them still open; the report used to come after leaving the unit).
 // Minimize, not exit: Android's own default finishes the activity and the battle on the field is lost.
 // (With @capacitor/app installed and no listener, Back does nothing at all.)
@@ -26,9 +26,11 @@ export function installAppShell({ actions, state, camera, pilot, audio }) {
     if (s.makerOpen) { actions.makerEscape(); return; }   // STEP8 UI: the unit maker: a picker goes back to the rows, else it closes
     if (s.foundOpen) { actions.closeFound(); return; }
     if (s.mapsOpen) { actions.closeMaps(); return; }
+    if (s.campOpen) { actions.campEscape(); return; }   // STEP9 UI: the campaign panel: a battles page goes back to the worlds, else it closes
     if (state.reportOpen) { actions.closeReport(); return; }
     if (p && p.active) { actions.leave(); return; }
     if (camera.follow || state.followArmed) { actions.armFollow(); return; }   // armFollow turns following off when on
+    if (s.inCamp) { actions.leaveCampaign(); return; }   // STEP9 UI: a campaign battle: back to the sandbox
     if (performance.now() - lastUp < PAINT_GRACE) return;
     call('minimizeApp');
   });

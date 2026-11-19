@@ -55,7 +55,7 @@ export function createPilot({ root, camera, game, iconFor, teamColors, onLeave, 
     for (const b of document.querySelectorAll('#controls > button')) {
       if (b.hidden) continue;
       const r = b.getBoundingClientRect();
-      if (!r.width || r.bottom <= h.top || r.top >= h.bottom || r.left < h.left + h.width / 2) continue;
+      if (!r.width || r.bottom <= h.top || r.top >= h.bottom || r.right <= lo) continue;   // STEP9 LEAD: every button right of the X counts (was: right of the bar's centre; at 568x320 the Campaign button starts left of it)
       hi = Math.min(hi, r.left - HP_GAP);
     }
     if (h.left >= lo && h.right <= hi) return;

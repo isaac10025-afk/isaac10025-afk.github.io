@@ -31,7 +31,7 @@ const T = {
   nerve: 0.6,               // a thrall's morale never drops below this (it doesn't run from its new fight)
   zap: {
     damage: 5, damageJitter: 1, cooldown: 0.8, cooldownJitter: 0.2, push: 40, stun: 0.1,
-    reach: 5, band: 8, facing: 0.7, circle: 0.3, backStep: true,
+    reach: 5, band: 8, facing: 0.7, circle: 0.3, backStep: true, chase: true,   // ATTACK3 L3: in close, it follows a runner (meleeFight)
   },
 };
 const NONE = 0, CHAN = 1;   // subState
@@ -54,11 +54,15 @@ export function thrallOf(w, v) { const e = recOf(w, v.id); return e ? e.by : -1;
 // STEP6 names the slimes Mindless, but OG's slime def says Animal: they are left out by type
 const SLIMES = new Set(['slime', 'bigslime', 'slimelet', 'kingslime']);
 /** May the alien take v's mind? (STEP6 rule + the obvious ones) */
+// attack 4 L2: another holder's check (the unit maker's Mind, maker/abilities/act2.js, registers it: it imports this file).
+let heldElsewhere = null;
+export function setHeldElsewhere(fn) { heldElsewhere = typeof fn === 'function' ? fn : null; }
 export function controllable(w, v) {
   const d = v.def;
   return v.hp > 0 && !v.dead && !d.prop && !d.machine && !d.boss && d.intelligence !== INT.Mindless && d.risenFrom === undefined &&
     !SLIMES.has(v.type) &&
-    v.possessed !== 1 && v.inside < 0 && v.hurled !== 1 && recOf(w, v.id) === null;
+    v.possessed !== 1 && v.inside < 0 && v.hurled !== 1 && recOf(w, v.id) === null &&
+    !(heldElsewhere && heldElsewhere(w, v));   // attack 4 L2: not a made unit's thrall (it went back to the made unit's side for good)
 }
 // one-off at a side change: units that now share v's side drop it as a target, and v drops its own
 function retarget(w, v) {
@@ -174,8 +178,8 @@ function brain(w, u) {
   if (!th && now >= b.next) {
     let m = null;
     if (t && controllable(w, t) && hypot(t.x - u.x, t.y - u.y) <= T.range && clearLine(w, u)) m = t;
-    else if (u.possessed !== 1 && (w.tick + u.index) % T.scanEvery === 0) m = findMark(w, u);
-    if (m) { startChannel(w, u, m); setState(u, STATE.ENGAGE); u.face = Math.atan2(m.y - u.y, m.x - u.x); return; }
+    else if (u.possessed !== 1 && (w.tick + u.index) % T.scanEvery === 0) { m = findMark(w, u); b.k = m ? 0 : 1; }
+    if (m) { b.k = 0; startChannel(w, u, m); setState(u, STATE.ENGAGE); u.face = Math.atan2(m.y - u.y, m.x - u.x); return; }
   }
   if (t) {
     const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
@@ -193,7 +197,9 @@ function brain(w, u) {
   }
   if (!t) { idle(w, u); return; }
   const dx = t.x - u.x, dy = t.y - u.y, d = hypot(dx, dy) || 0.001;
-  if (u.possessed === 1 || !clearLine(w, u) || d > T.range) { closeOn(w, u, t, dx, dy, d); return; }
+  // ATTACK3 L3: no thrall, ready, and nobody about it could take (its last look found none: machines, bosses, the
+  // mindless): go in and zap instead of keeping its distance for the rest of the battle
+  if (u.possessed === 1 || !clearLine(w, u) || d > T.range || (now >= b.next && b.k === 1)) { closeOn(w, u, t, dx, dy, d); return; }
   keepAt(w, u, t, dx, dy, d, T.want, T.band);
 }
 

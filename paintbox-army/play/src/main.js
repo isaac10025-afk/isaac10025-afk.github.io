@@ -9,7 +9,7 @@ import { createControls } from './ui/controls.js';
 import { attachInput, ZOOM } from './ui/input.js';
 import { openReport } from './ui/report.js';
 import { TOOLS, teamable } from './ui/tools.js';
-import { onLang, toggleLang, getLang } from './ui/strings.js';
+import { onLang, toggleLang, getLang, setLang, langPicked } from './ui/strings.js';
 import { createMockGame } from './ui/mock-game.js';
 import { createFallbackRecord, teamOf } from './ui/fallback-report.js';
 import * as debugRender from './render/debug.js';
@@ -23,8 +23,12 @@ import { createMapsPanel, createFound } from './ui/maps.js';
 import { createMineStore } from './ui/mine.js'; // STEP8 UI: the made units' store
 import { createMaker } from './ui/maker.js';    // STEP8 UI: the unit maker panel
 import { setMadeLookup } from './ui/strings.js'; // STEP8 UI: made units' names
+import { unitName } from './ui/strings.js';      // STEP10 LEAD: the share panel's messages
 import { createIntro, wantIntro } from './ui/intro.js'; // first visit: opening fight + a hand that paints (user pick A, 11-17)
-import { initPortal, loaded as portalLoaded, playing as portalPlaying, onSiteMute, onSiteHold, breakThen, portal } from './portal.js'; // web sites (Poki / CrazyGames / GamePix); does nothing elsewhere
+import { createCampaign } from './ui/campaign.js';             // STEP9 UI: the campaign panel, budget bar, clock, result card
+import { createCampaignStore } from './ui/campaign-store.js';  // STEP9 UI: best stars + best spend per battle
+import { createSharePanel } from './ui/share.js';             // STEP10 LEAD: share codes panel
+import { initPortal, loaded as portalLoaded, playing as portalPlaying, onSiteMute, onSiteHold, onSiteLang, breakThen, portal } from './portal.js'; // web sites (Poki / CrazyGames / GamePix / Yandex); does nothing elsewhere
 
 const STEP = 1 / 60;            // OG game.js:8656
 const MAX_TICKS = 4;            // OG game.js:6982
@@ -64,14 +68,22 @@ function reveal() { if (shown) return; shown = true; document.documentElement.cl
 // Web sites (portal.js): the site's own sound switch and an ad's sound both mute on top of ours; while a break holds the
 // game (ad asked for or playing) the sim stops and no press or key reaches the game. 'played' = the player has touched
 // the page once (sites want gameplayStart only once the player is playing).
+// Yandex: the site's language is the default (zh* -> 中文, anything else -> English) unless the player picked one here.
+onSiteLang((l) => { if (!langPicked()) setLang(/^zh/i.test(l) ? 'zh' : 'en', false); });
 initPortal();
+// Site builds: no browser menu on a right-click / long press anywhere on the page (Yandex requirement), except in text boxes.
+if (portal.site) addEventListener('contextmenu', (e) => { if (!(e.target && e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
 let siteMuted = false, adQuiet = false, adHold = false, touched = false;
 // Only presses on the game (#app) are held back: CrazyGames draws its ad inside this page, and its buttons must work.
 const ownTarget = (e) => { const t = e.target; return !t || t === window || t === document || t === document.body || t === document.documentElement || !!(t.closest && t.closest('#app')); };
+// A lift (finger / button / key up) always gets through: it starts nothing, and a finger or button that was down when
+// the hold began must end there (attack 4: held back, a site pause mid-stroke left a phone pinching on every later
+// one-finger touch - nothing painted again - and a mouse painting on hover with no button down).
+const LIFT = new Set(['pointerup', 'pointercancel', 'touchend', 'mouseup', 'keyup']);
 for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup', 'click', 'wheel', 'keydown', 'keyup', 'contextmenu']) {
   const moving = /move|wheel/.test(ev);   // passive: a held-back move needs no preventDefault, and scrolling stays smooth
   addEventListener(ev, (e) => {
-    if (adHold) { if (ownTarget(e)) { e.stopImmediatePropagation(); if (!moving && e.cancelable) e.preventDefault(); } return; }
+    if (adHold) { if (ownTarget(e) && !LIFT.has(ev)) { e.stopImmediatePropagation(); if (!moving && e.cancelable) e.preventDefault(); } return; }
     if (ev === 'pointerdown' || ev === 'keydown') touched = true;
   }, { capture: true, passive: moving });
 }
@@ -120,7 +132,10 @@ function startAudio() {
   call('init', { muted: state.muted || siteMuted, world: game.world });
   applyMute();
 }
-function applyMute() { call('setMuted', state.muted || siteMuted || adQuiet); }
+// The audio engine saves whatever it is told under the same key (audio/engine.js setMuted); what is kept must be the
+// player's own switch (attack 4: an ad's or a site pause's mute was saved, so leaving during an ad or with the tab
+// hidden started the next visit muted, sound button off).
+function applyMute() { call('setMuted', state.muted || siteMuted || adQuiet); try { localStorage.setItem(MUTE_KEY, state.muted ? '1' : '0'); } catch (e) { /* storage blocked */ } }
 onSiteMute((m) => { siteMuted = m; applyMute(); });
 let breakHold = false, siteHold = false;   // a break's ad / the site's own pause (GamePix): either holds the game
 function syncHold() { adHold = breakHold || siteHold; if (game) game.setPaused(adHold || state.paused); }
@@ -226,7 +241,16 @@ let mapsM = null, secrets = createSecrets([]), maps = null, found = null, hideIc
 let mapPick = false; // STEP7 AUDIO: the panel closes because a card was picked (the map's page flip plays, not the rustle)
 // STEP8 UI: the unit maker (sim/maker/index.js once the real game is up), the made units' store (ui/mine.js), the panel
 let makerM = null, mine = null, makerPanel = null;
-const hasMaps = () => !!(mapsM && game && typeof game.loadMap === 'function' && mapsM.allMaps().length > 0);
+// STEP9 UI: the campaign (sim/campaign/index.js once the real game is up), its store, its UI; campBefore = the sandbox's
+// team switch + map from before the first battle (Leave goes back to them); campPick = the panel closes for a pick
+let campM = null, campStore = null, camp = null, campBefore = null, campPick = false;
+const inCamp = () => !!(camp && camp.active);
+// STEP10 LEAD: share codes (sim/share.js once the real game is up) + the panel (ui/share.js)
+let shareM = null, sharePanel = null;
+const hasShare = () => !!(shareM && sharePanel && game && typeof game.place === 'function');
+const campLocked = () => inCamp() && !!(game.budget && game.budget.locked);   // STEP9 UI: after START (the tool bar steps aside)
+const hasCampaign = () => !!(camp && campM && game && typeof game.setBudget === 'function');
+const hasMaps = () => !inCamp() && !!(mapsM && game && typeof game.loadMap === 'function' && mapsM.allMaps().length > 0); // STEP9 UI: no maps in a campaign battle
 const state = { paused: false, muted: false, teams: false, result: '', reportOpen: false, statsOn: false, speed: 1, followArmed: false, following: false };
 let report = null, toolbar, counts, controls, input, pilot, view = { scale: ZOOM, W: 1, H: 1 };
 let intro = null;   // ui/intro.js, first visit only
@@ -237,7 +261,9 @@ function holding() { return !!(game.holding ?? game.world?.holding); }
 function canReport() { return typeof game.report === 'function' || record.active; }
 const call = (name, ...args) => { if (audio && typeof audio[name] === 'function') { try { return audio[name](...args); } catch (e) { console.warn('audio.' + name, e); } } };
 
-function uiState() { return { ...state, following: !!camera.follow, holding: holding(), canReport: canReport(), piloting: !!(pilot && pilot.active), mapsOpen: !!(maps && maps.open), foundOpen: !!(found && found.open), hasMaps: hasMaps(), makerOpen: !!(makerPanel && makerPanel.open) }; } // STEP8 UI: makerOpen
+function uiState() { return { ...state, following: !!camera.follow, holding: holding(), canReport: canReport(), piloting: !!(pilot && pilot.active), mapsOpen: !!(maps && maps.open), foundOpen: !!(found && found.open), hasMaps: hasMaps(), makerOpen: !!(makerPanel && makerPanel.open),
+  hasCampaign: hasCampaign(), campOpen: !!(camp && camp.open), inCamp: inCamp(), campOver: !!(camp && camp.resultOpen), campLocked: campLocked(),
+  hasShare: hasShare(), shareOpen: !!(sharePanel && sharePanel.open) }; } // STEP10 LEAD: + share; STEP8 UI: makerOpen; STEP9 UI: campaign
 
 // Setting the canvas size clears it. A cleared canvas must never reach the screen: resize() repaints the whole field
 // right away. Before (user, 11-14: "when I resize it [the green] comes out again"): it filled flat field green and left
@@ -313,6 +339,7 @@ function teamCounts(world) { // alive with hp > 0 per team (OG game.js:11553-115
   return [a, b];
 }
 function watchRound() {
+  if (inCamp()) return;   // STEP9 UI: a campaign battle has its own outcome and result card (ui/campaign.js)
   let res = '';
   if (typeof game.result === 'function') res = game.result() || '';
   else if (state.teams && !holding()) {
@@ -349,6 +376,7 @@ const actions = {
   },
   toggleLang() { toggleLang(); call('ui'); },
   toggleTeams() {
+    if (inCamp()) return;   // STEP9 UI: a campaign battle is always Team battle
     state.teams = !state.teams;
     game.setTeamMode(state.teams); // on: every unit joins its half's team + holding; off: back to own sides (user 11-17: never wipes)
     if (state.teams) { camera.toFit(); input && input.syncRadius(); }   // both halves + the midline in view
@@ -359,6 +387,7 @@ const actions = {
   startRound() {
     if (!holding()) return;
     game.start(); record.begin(game.world); setPaused(false); call('ui'); controls.update(); // OG game.js:8259-8261
+    if (inCamp()) { camp.started(); placeStart(); counts.keepClear(); }   // STEP9 UI: the army is set: its paint counts for the stars; the bar slides away
     input && input.guard(TAP_GUARD);   // START hides: a double tap's second tap must not paint where it was
   },
   openReport() {
@@ -425,7 +454,117 @@ const actions = {
   },
   closeMaker() { if (makerPanel) makerPanel.hide(); },
   makerEscape() { if (makerPanel) { makerPanel.escape(); call('ui'); } },
+  // STEP9 UI: the campaign. The button opens the worlds page (in a battle: its world's battles); a battle card plays that
+  // battle (a natural break: maybe an ad first, as a map pick); Leave goes back to the sandbox.
+  toggleCampaign() { if (!hasCampaign()) return; if (camp.open) camp.hide(); else camp.show(inCamp() ? camp.id.split('-')[0] : null); },
+  closeCampaign() { if (camp) camp.hide(); },
+  campEscape() { if (camp) camp.escape(); },
+  campPrimary() { if (camp) camp.primary(); },
+  playLevel(id, click) { if (click) { viaBreak(() => actions.playLevel(id, false)); return; } enterBattle(id); },
+  leaveCampaign() { leaveBattle(); },
+  // STEP10 LEAD: share codes. The button opens the panel (copy the battle / a made unit, paste a code).
+  toggleShare() { if (!hasShare() || (pilot && pilot.active)) return; if (sharePanel.open) sharePanel.hide(); else sharePanel.show(); },
+  closeShare() { if (sharePanel) sharePanel.hide(); },
 };
+// ---- STEP10 LEAD: share codes (sim/share.js does the packing; this is the glue to the UI state) ----
+const SAY = { broken: 'sh_broken', new: 'sh_new', none: 'sh_none' };
+async function shareBattleCode() {
+  const opts = { recipeOf: makerM ? makerM.recipeOf : null };
+  if (inCamp()) return shareM.encode(shareM.captureCampaign(game, camp.id, campM.PLAYER, opts));
+  const d = shareM.captureBattle(game, opts);
+  const changed = d.units.length > 0 || d.mapGone.length > 0 || Object.values(d.terrain).some((k) => k.add.length || k.rem.length);
+  return changed || d.map ? shareM.encode(d) : null;
+}
+async function shareUnitCode(type) { const r = makerM && makerM.recipeOf(type); return r ? shareM.encode(shareM.unitData(r)) : null; }
+// A recipe from a code -> its type here: the same unit already in Mine, else saved as a new one (null = Mine is full)
+function madeFromCode(recipe, added) {
+  if (!makerM || !mine) return null;
+  const clean = (r) => JSON.stringify({ ...makerM.cleanRecipe({ ...r, id: 1 }), id: 0 });
+  const want = clean(recipe);
+  for (const r of mine.list()) if (clean(r) === want) return makerM.madeType(r.id);
+  if (mine.full) return null;
+  const r = mine.save({ ...recipe, id: undefined }, true);
+  if (!r) return null;
+  added.push(makerM.madeType(r.id));
+  return makerM.madeType(r.id);
+}
+async function shareLoad(text) {
+  let d;
+  try { d = await shareM.decode(text); } catch (e) { return { ok: false, msg: say(SAY[e && e.code] || 'sh_broken') }; }
+  const added = [], typeOf = new Map();
+  for (const { type, recipe } of d.kind === 'unit' ? [{ type: null, recipe: d.recipe }] : d.recipes) {
+    const tp = madeFromCode(recipe, added);
+    if (!tp) { if (added.length) { syncMade(); toolbar.refreshMine(); } return { ok: false, msg: say(makerM ? 'sh_full' : 'sh_new') }; }
+    typeOf.set(type, tp);
+  }
+  if (added.length) { syncMade(); for (const tp of added) rcall('prewarm', { kind: 'unit', type: tp }, state.teams); }
+  if (d.kind === 'unit') {
+    const tp = typeOf.get(null);
+    toolbar.refreshMine(tp);
+    input && input.guard(TAP_GUARD); call('ui'); controls.update();
+    return { ok: true, msg: say('sh_added').replace('{name}', unitName(tp)) };
+  }
+  if (added.length) toolbar.refreshMine();
+  const mapType = (tp) => (typeOf.has(tp) ? typeOf.get(tp) : tp);
+  if (pilot && pilot.active) actions.leave();
+  if (report) actions.closeReport();
+  if (d.kind === 'campaign') {
+    if (!hasCampaign() || !campM.getLevel(d.level)) return { ok: false, msg: say('sh_new') };
+    enterBattle(d.level);
+    shareM.placeUnits(game, d.units, { typeOf: mapType });
+  } else {
+    if (inCamp()) leaveBattle();
+    state.teams = !!d.team; game.setTeamMode(state.teams);
+    actions.loadMap(d.map && mapsM && mapsM.getMap(d.map) ? d.map : 'blank');
+    shareM.applyBattle(game, d, { typeOf: mapType });
+  }
+  for (const tp of new Set(d.units.map((u) => mapType(u.type)))) rcall('prewarm', { kind: 'unit', type: tp }, state.teams);
+  input && input.guard(TAP_GUARD); call('ui'); controls.update(); placeStart();
+  return { ok: true };
+}
+// STEP9 UI: open campaign battle `id`: the level loaded (lead's loadLevel: map, enemy, budget, Team battle holding), the
+// tool bar without Terrain and with prices, the whole field in view, the budget bar on.
+function enterBattle(id) {
+  if (!campM || !camp || !campM.getLevel(id)) return false;
+  if (pilot && pilot.active) actions.leave();
+  if (!inCamp()) campBefore = { teams: state.teams, map: game.mapId || 'blank' };
+  if (camp.open) { campPick = true; camp.hide(); campPick = false; }   // no rustle: the sim's 'map' event plays the page flip
+  if (report) actions.closeReport();
+  campM.loadLevel(game, id);
+  state.teams = true; state.result = ''; fielded = [false, false]; overSince = -1; record.clear();
+  rcall('clear');
+  toolbar.setCampaign(true, (type) => campM.forSale(type));
+  if (game.tool) rcall('prewarm', game.tool, true);
+  camera.toFit(); input.syncRadius(); input.restyle(); input.guard(TAP_GUARD);
+  camp.begin(id);
+  controls.update(); placeStart(); camp.placeBar();
+  return true;
+}
+// STEP9 UI: Leave: back to the sandbox as it was before the campaign (its team switch, its map, fresh)
+function leaveBattle() {
+  if (!inCamp()) return;
+  if (pilot && pilot.active) actions.leave();
+  if (report) actions.closeReport();
+  campM.leaveCampaign(game);
+  camp.end();
+  toolbar.setCampaign(false);
+  const before = campBefore || { teams: false, map: 'blank' }; campBefore = null;
+  state.teams = before.teams; game.setTeamMode(before.teams);
+  actions.loadMap(before.map);
+  input.restyle(); input.guard(TAP_GUARD); call('ui'); controls.update(); placeStart();
+}
+// STEP9 UI: a paint stroke began in a campaign battle. game.js emits 'budgetOut' only while world.budget.out is false and
+// sets it on the first miss (reset only by a refund or Clear), so a second stroke into an empty budget stayed silent; the
+// contract is one per stroke. Reset it here (after the stroke's first dab: a tap with no drag gives no bump) and let the
+// bar bump once for this stroke.
+function campStroke() { const B = game.world.budget; if (B) B.out = false; camp.newStroke(); }
+// STEP9 UI: made units an edit / delete took off the field give their paint back (before START). game.js keeps what each
+// placed unit cost in world.budget.paid (id -> paint); a unit no longer on the field is refunded like an erase.
+function campRefund() {
+  const B = inCamp() && game.world.budget;
+  if (!B || B.locked || !B.paid) return;
+  for (const [id, cost] of B.paid) if (!game.world.unitById(id)) { B.spent = Math.max(0, B.spent - cost); B.paid.delete(id); if (B.kids) B.kids.delete(id); B.out = false; }
+}
 // STEP8 UI: register the stored made units (and drop the ones that are gone): a recipe that changed is registered again
 // and its look and icons are made again. Returns the types that changed (their field copies come off: clearMadeUnits).
 function syncMade() {
@@ -449,6 +588,7 @@ function saveMade(recipe, isNew) {
   if (!r) return;
   const type = makerM.madeType(r.id);
   for (const tp of syncMade()) makerM.clearMadeUnits(game.world, tp);   // an edit: the old copies come off the field (no deaths)
+  campRefund();   // STEP9 UI
   syncPilot();
   toolbar.refreshMine(type);
   rcall('prewarm', { kind: 'unit', type }, state.teams);
@@ -460,6 +600,7 @@ function deleteMade(recipe) {
   makerM.clearMadeUnits(game.world, type);
   mine.remove(recipe.id);
   for (const tp of syncMade()) makerM.clearMadeUnits(game.world, tp);
+  campRefund();   // STEP9 UI
   syncPilot();
   toolbar.refreshMine();
   input && input.guard(TAP_GUARD);
@@ -480,7 +621,10 @@ function syncPilot() {
   pilot.update();
 }
 function setPaused(b) { state.paused = !!b; game.setPaused(state.paused || adHold); controls.update(); }
-function clearNow(click) { game.clear(); rcall('clear'); record.clear(); fielded = [false, false]; overSince = -1; if (click) call('ui'); controls.update(); }
+function clearNow(click) {
+  if (inCamp()) { enterBattle(camp.id); if (click) call('ui'); return; }   // STEP9 UI: Clear in a campaign battle = the battle fresh
+  game.clear(); rcall('clear'); record.clear(); fielded = [false, false]; overSince = -1; if (click) call('ui'); controls.update();
+}
 function placeStart() { controls.placeStart(toolbar.el); setInsets(); }
 // Step 7 (lead): tell the camera which parts of the view the UI covers, so the map under the tool bar / round buttons can
 // be panned into sight (camera.js inset).
@@ -488,7 +632,8 @@ function setInsets() {
   if (!toolbar || !toolbar.el) return;
   const cr = canvas.getBoundingClientRect(), tb = toolbar.el.getBoundingClientRect(), bt = document.getElementById('clear');
   const br = bt ? bt.getBoundingClientRect() : null;
-  const b = tb.height > 0 && tb.top < cr.bottom ? Math.max(0, Math.min(cr.height * 0.6, cr.bottom - tb.top)) : 0;
+  const away = document.body.classList.contains('camp-locked');   // STEP9 UI: a campaign battle after START: the bar is out of sight
+  const b = !away && tb.height > 0 && tb.top < cr.bottom ? Math.max(0, Math.min(cr.height * 0.6, cr.bottom - tb.top)) : 0;
   const t = br && br.height > 0 && br.bottom > cr.top ? Math.max(0, Math.min(cr.height * 0.3, br.bottom - cr.top + 6)) : 0;
   camera.setInset(Math.round(t), 0, Math.round(b), 0);
 }
@@ -509,7 +654,7 @@ function frame(now) {
   last = now;
   if (iconQueue.length) pumpIcons(6);
   if (dt > 0) frameMs += 0.05 * (1000 * dt - frameMs);
-  portalPlaying(shown && touched && !state.paused && !adHold && !state.reportOpen && !(maps && maps.open) && !(found && found.open) && !(makerPanel && makerPanel.open) && !document.hidden, dt);
+  portalPlaying(shown && touched && !state.paused && !adHold && !state.reportOpen && !(maps && maps.open) && !(found && found.open) && !(makerPanel && makerPanel.open) && !(camp && camp.open) && !(sharePanel && sharePanel.open) && !document.hidden, dt); // STEP9 UI: + campaign panel; STEP10 LEAD: + share panel
   if (!state.paused && !adHold) acc += dt * state.speed;   // slow motion: the sim runs slower, the screen doesn't
   syncPilot();
   const fv = camera.follow; camera.update(dt); if (fv && !camera.follow) controls.update();
@@ -528,6 +673,7 @@ function frame(now) {
   const events = game.drainEvents ? game.drainEvents() : [];
   if (events.length) rcall('handleEvents', events, game.world);
   call('handleEvents', events, game.world);   // every frame: the audio engine's demand counts decay per call (11-15)
+  if (inCamp()) { camp.handleEvents(events); camp.frame(); }   // STEP9 UI: budget bar bump, bar, clock, outcome
   watchRound();
   syncPilot();   // a death or hand-over this frame shows at once
   call('update', state.paused || adHold, game.world);
@@ -562,6 +708,9 @@ async function boot() {
       catch (e) { console.warn('mine store', e); makerM = null; mine = null; }
     }
   }
+  // STEP9 UI: the campaign (levels, budgets, prices, loadLevel, outcome)
+  if (gameKind === 'real') { try { const m = await import('./sim/campaign/index.js'); if (typeof m.loadLevel === 'function' && typeof game.setBudget === 'function') campM = m; } catch (e) { console.warn('campaign', e); } }
+  if (gameKind === 'real') { try { shareM = await import('./sim/share.js'); } catch (e) { console.warn('share', e); shareM = null; } }   // STEP10 LEAD
   audio = await loadAudio(); // init() runs once the page is shown (startAudio): its 250 ms context timer counts from then
 
   controls = createControls(actions);
@@ -585,7 +734,7 @@ async function boot() {
     onFollowPick: (u) => { state.followArmed = false; camera.follow = u || null; camera.version++; controls.update(); },
     game: () => game,
     getTool: () => tool,
-    onPaint: (tl, x, y, n, len) => call('onPaint', tl, x, y, n, len),
+    onPaint: (tl, x, y, n, len) => { if (len === 0 && inCamp()) campStroke(); call('onPaint', tl, x, y, n, len); }, // STEP9 UI: a stroke begins
     onSecret: () => actions.findSecret(),   // step 7: a tap on the map's hidden secret unit
     ringColor: (tl, x) => {
       if (!tl) return debugRender.theme.outline;
@@ -629,11 +778,37 @@ async function boot() {
     });
     found = createFound({ root: document.getElementById('app'), bigIcon, onClose: (type) => { input.guard(TAP_GUARD); toolbar.openSecret(type); controls.update(); } });
   }
+  if (campM) { // STEP9 UI: the campaign panel + battle UI
+    try {
+      campStore = createCampaignStore({ mode: params.get('campaign'), worlds: campM.WORLDS, perWorld: campM.PER_WORLD });
+      camp = createCampaign({
+        root: document.getElementById('app'), cm: campM, store: campStore, iconFor, bigIcon, game: () => game,
+        onPick: (id) => actions.playLevel(id, true),
+        onOpenChange: (open) => { if (!campPick) call('mapsPanel', open); if (!open) input.guard(TAP_GUARD); controls.update(); },
+        onRetry: (id) => viaBreak(() => enterBattle(id)), onNext: (id) => viaBreak(() => enterBattle(id)),
+        onBattles: (w) => { camp.show(w); }, onReport: () => actions.openReport(),
+        onOver: () => { if (pilot && pilot.active) actions.leave(); controls.update(); },
+        sound: { ui: () => call('ui'), stamp: (i) => call('starStamp', i), out: () => call('paintOut'), win: () => call('campWin'), lose: () => call('campLose') },
+      });
+    } catch (e) { console.warn('campaign ui', e); camp = null; campStore = null; }
+  }
+  if (shareM) { // STEP10 LEAD: the share panel
+    sharePanel = createSharePanel({
+      root: document.getElementById('app'), iconFor,
+      units: () => (mine ? mine.list().map((r) => makerM.madeType(r.id)).filter((tp) => !!makerM.recipeOf(tp)) : []),
+      battleCode: shareBattleCode, unitCode: shareUnitCode, onLoad: shareLoad,
+      onOpenChange: (open) => { call('mapsPanel', open); if (!open) input.guard(TAP_GUARD); controls.update(); },
+      sound: () => call('ui'),
+    });
+  }
   counts = createCounts(document.getElementById('counts'), { getCounts: () => (game.counts ? game.counts() : {}), iconFor, toolbarEl: () => toolbar.el });
   toolbar.selectIndex(0); // starting tool = tool 0 (OG page-ui.js:1071)
 
-  onLang(() => { toolbar.relabel(); counts.relabel(); controls.relabel(); pilot.relabel(); if (maps) maps.relabel(); if (makerPanel) makerPanel.relabel(); }); // STEP8 UI: + maker
-  const onResize = () => { resize(); placeStart(); counts.keepClear(); };
+  onLang(() => { toolbar.relabel(); counts.relabel(); controls.relabel(); pilot.relabel(); if (maps) maps.relabel(); if (makerPanel) makerPanel.relabel(); if (camp) camp.relabel(); if (sharePanel) sharePanel.relabel(); }); // STEP8 UI: + maker; STEP9 UI: + campaign; STEP10 LEAD: + share
+  const onResize = () => { resize(); placeStart(); counts.keepClear(); if (camp) camp.placeBar(); }; // STEP9 UI: + the budget bar
+  // STEP9 UI: the tool bar slid away (a campaign battle after START) or back (Retry / Clear / Next / Leave): the camera's
+  // insets and the count chip follow it once it has arrived
+  toolbar.el.addEventListener('transitionend', (e) => { if (e.target === toolbar.el && e.propertyName === 'translate') { setInsets(); counts.keepClear(); } });
   addEventListener('resize', onResize);
   phoneQuery.addEventListener('change', onResize);
   // iOS: block pinch-zoom gestures and double-tap zoom outside the canvas too
@@ -654,7 +829,9 @@ async function boot() {
 
   controls.update(); placeStart();
   if (params.get('map')) actions.loadMap(params.get('map'));   // ?map=<id>: start on that map (shots, tests)
-  if (gameKind === 'real' && wantIntro(params)) {
+  // STEP9 UI (was the lead's switch): ?level=<world-n> opens that campaign battle (level shots, tests)
+  if (params.get('level') && camp) { try { enterBattle(params.get('level')); } catch (e) { console.warn('level', e); } }
+  if (gameKind === 'real' && wantIntro(params) && !inCamp()) { // STEP9 UI: no opening fight on a campaign battle
     try {
       intro = createIntro({
         root: document.getElementById('app'), canvas, camera, game, toolbar, tools: TOOLS, getTool: () => tool,
@@ -667,7 +844,9 @@ async function boot() {
   }
   document.body.dataset.game = gameKind;
   window.__pb = { get game() { return game; }, get ctx() { return ctx; }, kind: gameKind, state, toolbar, counts, actions, TOOLS, camera, pilot, get view() { return view; }, get audio() { return audio; }, secrets, maps, found, portal, get intro() { return intro; },
-    mine, maker: makerPanel, makerM, CATEGORIES: toolbar.tabs }; // STEP8 UI: made units store, maker panel, maker module, the tabs shown
+    mine, maker: makerPanel, makerM, CATEGORIES: toolbar.tabs, // STEP8 UI: made units store, maker panel, maker module, the tabs shown
+    camp, campStore, campM, // STEP9 UI: the campaign UI, its store, sim/campaign/index.js
+    get share() { return sharePanel; }, get shareM() { return shareM; } }; // STEP10 LEAD
   // Phone app (Android / iOS shell, step 5): Back button + app pause. Never loaded on the web.
   if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
     import('./app-shell.js').then((m) => m.installAppShell({ actions, state, camera, pilot: () => pilot, audio: () => audio })).catch((e) => console.error('app shell', e));

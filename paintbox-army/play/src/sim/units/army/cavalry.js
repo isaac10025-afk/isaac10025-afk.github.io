@@ -44,6 +44,36 @@ const RIDE = Object.freeze({
   dismountFire: 0.4, // 40% the Knight catches fire with 0.6× the burn (OG game.js:12870)
   dismountFireMul: 0.6, // OG game.js:12870
 });
+// OURS (user 11-18: "they just be going in circles to that guy and when they got the riffle man surrounded they stop").
+// OG charges with the goal always at the target; the vehicle mover keeps a pace of goal·cos²(angle off the nose) and
+// turns at turnRate / (1 + speed/70), so a horse with its target 30-80° off speeds up before it has turned and spirals
+// in. Riflemen also back off from anything inside 120 px, so near the target it ends up beside it, 35-60 px out,
+// creeping round: too slow to trample, too far to kick (reach r + r + 10 ≈ 30); a boxed-in rifleman leaves the horses
+// half-turned and still. OG does the same (tests/og-oracle probe 11-18: a lone cavalry fails to kill a lone rifleman
+// in 20 s in 9 runs of 20). Fix: while charging, a target more than REIN.angle off the nose = rein round first (goal set
+// REIN.turn off the heading, past 90°, so the pace is 0 and the horse brakes and turns at its full standing rate); once
+// it faces the target the OG charge runs it straight in.
+export const REIN = Object.freeze({
+  angle: 0.5, // rad (~30°): nearer its nose than this, the OG charge goal (trample at speed, kick in reach)
+  turn: 1.75, // rad (~100°): goal angle off the heading while reining round (past 90° = no forward pace)
+});
+// Reining goal: past 90° on the target's side, or straight at the target when it is already further round than that.
+export function reinGoal(u, dx, dy, speed) {
+  const ta = Math.atan2(dy, dx), off = Math.atan2(Math.sin(ta - u.heading), Math.cos(ta - u.heading));
+  if (Math.abs(off) <= REIN.angle) return false;
+  const a = Math.abs(off) > REIN.turn ? ta : u.heading + Math.sign(off) * REIN.turn;
+  u.goalX = Math.cos(a) * speed; u.goalY = Math.sin(a) * speed;
+  return true;
+}
+// OURS (same report): a dodging rifleman slips past a charge 30-35 px out, just outside the trample's r + r + 1.5. When the
+// trample hits nobody, the rider cuts the man he is charging as he rides past: same hit as a trample, reach CUT.reach.
+export const CUT = Object.freeze({ ...TRAMPLE, reach: 14 }); // px past touching: the rider's arm + sword (~ one horse radius)
+let _cutT = null;
+const cutMask = (u, o) => o === _cutT;
+export function cutPast(world, u, t, sp) {
+  _cutT = t; const n = trample(world, u, sp, CUT, cutMask); _cutT = null;
+  return n > 0;
+}
 
 // Dismount `K` (OG game.js:12848-12871): the Cavalry becomes a loose Horse (no group); a full-hp Knight is thrown off.
 function dismount(world, u) {
@@ -158,10 +188,12 @@ const D = registerUnit({
       setState(u, S.ADVANCE); pathTo(world, u, t.x, t.y, D.walkSpeed, hasLos(world, u)); return;
     }
     setState(u, S.CHARGE); // OG game.js:12769-12780
-    const lead = Math.min(d / TRAMPLE.fullSpeed, RIDE.leadMax), lx = dx + t.vx * lead, ly = dy + t.vy * lead, a = hyp(lx, ly) || 0.001;
-    u.goalX = (lx / a) * TRAMPLE.fullSpeed; u.goalY = (ly / a) * TRAMPLE.fullSpeed;
+    if (u.possessed === 1 || !reinGoal(u, dx, dy, D.walkSpeed)) { // OURS: target off the nose → rein round first (REIN above); the player's horse keeps the full charge pace under the stick (possess.js takes max(run, goal))
+      const lead = Math.min(d / TRAMPLE.fullSpeed, RIDE.leadMax), lx = dx + t.vx * lead, ly = dy + t.vy * lead, a = hyp(lx, ly) || 0.001;
+      u.goalX = (lx / a) * TRAMPLE.fullSpeed; u.goalY = (ly / a) * TRAMPLE.fullSpeed;
+    }
     if (canTrample(world, u, sp)) {
-      if (trample(world, u, sp, TRAMPLE) > 0) { b.subState = 1; b.timer = world.time + RIDE.rideThrough * range(world, RIDE.rideLo, RIDE.rideHi); }
+      if (trample(world, u, sp, TRAMPLE) > 0 || cutPast(world, u, t, sp)) { b.subState = 1; b.timer = world.time + RIDE.rideThrough * range(world, RIDE.rideLo, RIDE.rideHi); } // OURS: || cutPast (CUT above)
     } else if (u.cooldown <= 0 && d <= u.radius + t.radius + SLOW.reachGap) slowMelee(world, u, t, dx / d, dy / d);
   },
   onDeath(world, u) { // OG game.js:12782-12819

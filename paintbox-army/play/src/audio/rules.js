@@ -339,6 +339,12 @@ export const OWN_SOUNDS = {
   // ... and a made unit with Drink clings to its host's side on the ground (the mosquito rides up in the air, its whine
   // covering the drinking): it slurps while latched (a held loop, MADE loops below).
   'drink-slurp': { volume: 0.13, jitter: 0, max: 1, priority: 3, loop: true },
+  // OURS (Part 2 step 9, STEP9 UI): the campaign's UI moments (audio/index.js): a star stamped onto the result card (3 in a
+  // row, each a step higher), a paint stroke that ran out of paint, the win and lose stings. Played in the middle.
+  'star-stamp': v(0.42, 3, 10, 0.02),
+  'paint-out': v(0.32, 1, 10, 0.06),
+  'camp-win': v(0.5, 1, 10, 0),
+  'camp-lose': v(0.45, 1, 10, 0),
 };
 // Every sound the mixer can play: theirs, then ours (no name is in both: tests/audio.test.mjs).
 export const SOUND = { ...SOUNDS, ...OWN_SOUNDS };

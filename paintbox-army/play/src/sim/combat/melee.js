@@ -84,7 +84,7 @@ function trampleOne(c) {
   initCombat(c);
   if (c.id === u.lastVictim && u.cooldown > 0) return;
   const ax = c.x - u.x, ay = c.y - u.y;
-  if (hypot(ax, ay) > u.radius + c.radius + TRAMPLE_PAD) return;
+  if (hypot(ax, ay) > u.radius + c.radius + (p.reach ?? TRAMPLE_PAD)) return; // OURS: p.reach = cavalry pass cut (apecav.js)
   const fx = Math.cos(u.heading), fy = Math.sin(u.heading);
   if (ax * fx + ay * fy < 0) return;                                           // only in front
   const j = Math.min(1, _tspeed / p.fullSpeed), pass = damage(w, c, p.damage * j, u);
@@ -105,7 +105,7 @@ function trampleOne(c) {
 export function trample(world, u, speed, spec, mask) {
   initCombat(u);
   _tu = u; _tw = world; _ts = spec; _tspeed = speed; _tn = 0; _tmask = mask || null; _tstop = false;
-  world.query(u.x, u.y, u.radius + QUERY_MARGIN + TRAMPLE_PAD, trampleOne);
+  world.query(u.x, u.y, u.radius + QUERY_MARGIN + (spec.reach ?? TRAMPLE_PAD), trampleOne);
   const n = _tn; _tu = null; _tw = null; _ts = null; _tmask = null;
   return n;
 }

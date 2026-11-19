@@ -160,7 +160,13 @@ registerAbility({
       bag.next2 = now + T_BUR.crowdEvery * (0.8 + 0.4 * ((u.index * 0.618) % 1));   // spread over the second, by unit
       bag.k = pickCrowd(w, u, bag) ? 1 : 0;
     }
-    if (bag.k !== 1) { idle(w, u); return true; }
+    if (bag.k !== 1) {
+      // ATTACK3 L4 (OURS): no crowd to go for (the enemies left are all under the ground too, or out of reach): come up
+      // where it is once it may, and fight on the surface. Two burrowers never found each other (a burrowed unit is no
+      // crowd: thickestCrowd skips hidden units) and stayed under for good, 0 damage in 90 s with the march on.
+      if (now >= bag.next && canSurface(w, u.x, u.y)) { rumble(w, u, bag); return true; }
+      idle(w, u); return true;
+    }
     const dx = bag.x0 - u.x, dy = bag.y0 - u.y, d = hypot(dx, dy);
     setState(u, STATE.ADVANCE);
     if (d > T_BUR.arrive) { goAt(u, dx, dy, d, Math.max(T_BUR.under, u.def.runSpeed)); return true; }

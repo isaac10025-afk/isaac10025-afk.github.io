@@ -63,6 +63,7 @@ export function createCounts(el, { getCounts, iconFor, toolbarEl }) {
     el.style.bottom = '';
     if (!tb || order.length === 0) return;
     const b = tb.getBoundingClientRect(), o = el.getBoundingClientRect();
+    if (b.top >= innerHeight - 1) return;   // STEP9 UI: the bar slid out of sight (a campaign battle after START): the chip stays down
     if (o.right + 8 > b.left && o.left < b.right) el.style.bottom = `${innerHeight - b.top + 8}px`;
   }
   const timer = setInterval(update, 150);

@@ -8,10 +8,15 @@ export function createControls(a) {
     maps: $('maps-button'), clear: $('clear'), pause: $('pause'), sound: $('sound'), lang: $('lang'), slow: $('slow'), follow: $('follow'), speed: document.querySelector('#slow .speed'), teams: $('teams'), start: $('start'),
     paused: $('paused'), labels: $('team-labels'), labelL: document.querySelector('.team-label.left'), labelR: document.querySelector('.team-label.right'),
     midline: $('midline'), result: $('result'), resultText: $('result-text'), again: $('again'), statsBtn: $('stats-button'), stats: $('stats'),
+    campaign: $('campaign-button'), leave: $('leave-button'), // STEP9 UI: the campaign panel, leave a campaign battle
+    share: $('share-button'), // STEP10 LEAD: the share panel (ui/share.js)
   };
   const blur = (e) => { if (e && e.currentTarget && e.currentTarget.blur) e.currentTarget.blur(); };
   const on = (b, fn) => b.addEventListener('click', (e) => { fn(e); blur(e); });
   on(el.maps, () => a.toggleMaps(true));   // Part 2 step 7: the maps panel (ui/maps.js)
+  if (el.campaign) on(el.campaign, () => a.toggleCampaign()); // STEP9 UI: the campaign panel (ui/campaign.js)
+  if (el.leave) on(el.leave, () => a.leaveCampaign());        // STEP9 UI: back to the sandbox
+  if (el.share) on(el.share, () => a.toggleShare());           // STEP10 LEAD: share codes
   on(el.clear, () => a.clearField(true));
   on(el.pause, () => a.togglePause(true));
   on(el.sound, () => a.toggleSound());
@@ -33,13 +38,18 @@ export function createControls(a) {
     // step 7: the maps panel takes every key (Esc / N close it); Esc closes the Found card
     if (s.mapsOpen) { if (e.code === 'Escape' || e.code === 'KeyN') a.closeMaps(); return; }
     if (s.foundOpen && e.code === 'Escape') { a.closeFound(); return; }
+    // STEP9 UI: the campaign panel takes every key (Esc = back to the worlds / close); the result card: Enter = Next / Retry
+    if (s.campOpen) { if (e.code === 'Escape') a.campEscape(); return; }
+    // STEP10 LEAD: the share panel takes every key (typing / pasting a code must never clear the field); Esc closes it
+    if (s.shareOpen) { if (e.code === 'Escape') a.closeShare(); return; }
+    if (s.campOver && (e.code === 'Enter' || e.code === 'NumpadEnter')) { a.campPrimary(); return; }
     const enter = e.code === 'Enter' || e.code === 'NumpadEnter';
     if (e.code === 'Space') { e.preventDefault(); a.togglePause(false); }
     else if (enter && s.holding) a.startRound();
     else if (enter && s.result) a.newBattle();
     else if (e.code === 'KeyC') a.clearField(false);
     else if (e.code === 'KeyM') a.toggleSound();
-    else if (e.code === 'KeyN' && s.hasMaps) a.toggleMaps(false);   // N = maps (M is mute)
+    else if (e.code === 'KeyN' && s.hasMaps && !s.inCamp) a.toggleMaps(false);   // N = maps (M is mute); STEP9 UI: none in a campaign battle
     else if (e.code === 'Backquote') a.toggleStats();
     else if (e.code === 'Period' && s.paused) a.stepOnce();
     else if (e.code === 'Tab') { e.preventDefault(); a.nextTab(e.shiftKey ? -1 : 1); }
@@ -60,6 +70,9 @@ export function createControls(a) {
     const s = a.state();
     if (!el.result.hidden) requestAnimationFrame(placeResult);   // new words, new width (中文 / EN)
     el.maps.setAttribute('aria-label', t('maps')); el.maps.title = `${t('maps')} (N)`;
+    if (el.campaign) { el.campaign.setAttribute('aria-label', t('campaign')); el.campaign.title = t('campaign'); } // STEP9 UI
+    if (el.leave) { el.leave.setAttribute('aria-label', t('c_leave')); el.leave.title = t('c_leave'); }
+    if (el.share) { el.share.setAttribute('aria-label', t('share')); el.share.title = t('share'); } // STEP10 LEAD
     el.clear.setAttribute('aria-label', t('clear')); el.clear.title = `${t('clear')} (C)`;
     el.pause.setAttribute('aria-label', s.paused ? t('play') : t('pause')); el.pause.title = `${s.paused ? t('play') : t('pause')} (Space)`;
     el.sound.setAttribute('aria-label', t('sound')); el.sound.title = `${t('sound')} (M)`;
@@ -75,8 +88,14 @@ export function createControls(a) {
   }
   function update() {
     const s = a.state();
-    el.maps.hidden = !s.hasMaps;
+    el.maps.hidden = !s.hasMaps || !!s.inCamp; // STEP9 UI: a campaign battle's map is the level
     el.maps.setAttribute('aria-expanded', String(!!s.mapsOpen));
+    if (el.campaign) { el.campaign.hidden = !s.hasCampaign; el.campaign.setAttribute('aria-expanded', String(!!s.campOpen)); } // STEP9 UI
+    if (el.leave) el.leave.hidden = !s.inCamp;
+    if (el.share) { el.share.hidden = !s.hasShare; el.share.setAttribute('aria-expanded', String(!!s.shareOpen)); } // STEP10 LEAD
+    el.teams.hidden = !!s.inCamp;                       // STEP9 UI: no Team switch in a campaign battle (always teams)
+    document.body.classList.toggle('campaign', !!s.inCamp);
+    document.body.classList.toggle('camp-locked', !!s.campLocked);   // STEP9 UI: after START the tool bar slides away (index.html)
     el.pause.classList.toggle('paused', s.paused);
     el.sound.setAttribute('aria-pressed', String(!s.muted));
     el.speed.textContent = s.speed === 0.5 ? '½' : s.speed === 0.25 ? '¼' : '';   // shown only when slowed
@@ -87,7 +106,7 @@ export function createControls(a) {
     el.paused.hidden = !s.paused;
     el.paused.classList.toggle('teams', s.teams && s.holding);
     el.midline.hidden = !s.teams;
-    el.labels.hidden = !(s.teams && s.holding);
+    el.labels.hidden = !(s.teams && s.holding) || !!s.inCamp; // STEP9 UI: the budget bar holds the top in a campaign battle
     el.start.hidden = !s.holding;
     el.result.hidden = !s.result;
     el.resultText.className = s.result || '';

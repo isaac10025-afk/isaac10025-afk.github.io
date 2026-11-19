@@ -129,6 +129,23 @@ export function keepAt(w, u, t, dx, dy, d, want, band) {
   else if (d < want - band) { u.goalX = (-dx / d) * sp; u.goalY = (-dy / d) * sp; }
 }
 /**
+ * Stepping-in speed inside the melee band (W.close, default walk × 0.6). ATTACK3 L3: a foe moving away is followed at
+ * its own pace + a little (up to run speed), and (meleeFight) without the strafe and the step back after each blow: at
+ * walk × 0.6, strafing, a tackler / teleporter / shrink ray stayed 20 px behind a running rifleman for the rest of the
+ * battle, never quite in reach.
+ */
+export function closeSpeed(u, t, W, dx, dy, d) {
+  const cs = W.close !== undefined ? W.close : u.def.walkSpeed * 0.6, away = (t.vx * dx + t.vy * dy) / d;
+  return away > 0 && chases(u, W) ? Math.min(u.def.runSpeed, Math.max(cs, away + CHASE_GAIN)) : cs;
+}
+/** Does this blow go after a runner? Melee fighters do; a ranged unit's close-in blow doesn't (it shoots instead), nor
+ *  W.chase false (the cheerleader's slap: she stays behind the front); W.chase true opts a ranged unit in. */
+function chases(u, W) { return W.chase !== undefined ? W.chase : u.def.melee === true; }
+const CHASE_GAIN = 20;   // px/s faster than a foe moving away (ATTACK3 L3)
+const RUNNER = 60;       // px/s: a foe moving away faster than this is a runner: no strafing or stepping back after it
+/** Is t moving away from u faster than RUNNER (fleeing, backing off at a run)? (ATTACK3 L3) */
+function running(t, dx, dy, d) { return (t.vx * dx + t.vy * dy) / d > RUNNER; }
+/**
  * meleeFight(w, u, t, W, dx, dy, d) → 0 out of reach, 1 engaged, 2 struck this tick.
  * W: {damage, damageJitter, push, stun, cooldown, cooldownJitter, reach (gap past both radii), band, facing, circle, backStep, close}.
  */
@@ -139,8 +156,11 @@ export function meleeFight(w, u, t, W, dx, dy, d) {
   const a = Math.atan2(dy, dx), def = u.def;
   u.face = a;
   let r = 1;
-  if (d > reach) { const cs = W.close !== undefined ? W.close : def.walkSpeed * 0.6; u.goalX = (dx / d) * cs; u.goalY = (dy / d) * cs; }
+  if (d > reach) { const cs = closeSpeed(u, t, W, dx, dy, d); u.goalX = (dx / d) * cs; u.goalY = (dy / d) * cs; }
   else if (u.cooldown <= 0 && Math.abs(angleDiff(u.heading, a)) < W.facing) { meleeStrike(w, u, t, W); r = 2; }
+  // ATTACK3 L3: after a runner: straight after it, as a charge (no strafing, no step back, and no pull back to its
+  // painted spot: Engage keeps 0.3 of the formation pull, which held a chaser to the runner's pace)
+  if (chases(u, W) && running(t, dx, dy, d)) { setState(u, STATE.CHARGE); return r; }
   circle(w, u, t, dx, dy, d, def, W.circle, W.backStep !== false);
   oddsApproach(w, u, t, dx, dy, d, def);
   return r;
@@ -209,20 +229,21 @@ export function outside(w, x, y) { return x < 0 || y < 0 || x > w.W || y > w.H; 
 // First unit a segment touches (x0,y0)+(dx,dy)·t, t in [0, tMax]: SWEEP.t = where. Skips the dead, the swallowed, units
 // under water (as bullets do), friends; props only when `props` (rays and rockets hit trees, the shrink ring passes them).
 export const SWEEP = { t: Infinity };
-let _w = null, _p = null, _x0 = 0, _y0 = 0, _dx = 0, _dy = 0, _F = 1, _pad = 0, _props = true, _best = null, _bestT = Infinity;
+let _w = null, _p = null, _x0 = 0, _y0 = 0, _dx = 0, _dy = 0, _F = 1, _pad = 0, _props = true, _best = null, _bestT = Infinity, _skip = null;
 function segOne(u) {
   if (!(u.hp > 0) || u.inside >= 0 || (!_props && u.def.prop) || !hittable(_p, u) || submerged(_w, u)) return;
+  if (_skip !== null && _skip(u)) return;
   const ox = u.x - _x0, oy = u.y - _y0;
   let t = (ox * _dx + oy * _dy) / _F; t = t < 0 ? 0 : t > 1 ? 1 : t;
   const qx = ox - _dx * t, qy = oy - _dy * t, R = u.radius + _pad;
   if (qx * qx + qy * qy < R * R && t < _bestT) { _bestT = t; _best = u; }
 }
-export function sweepFirst(w, p, x0, y0, dx, dy, tMax, pad, props) {
+export function sweepFirst(w, p, x0, y0, dx, dy, tMax, pad, props, skip = null) {   // skip(u) → true: passes u by (ATTACK3 L3)
   const F2 = dx * dx + dy * dy || 1e-6, len = Math.sqrt(F2);
-  _w = w; _p = p; _x0 = x0; _y0 = y0; _dx = dx; _dy = dy; _F = F2; _pad = pad; _props = props; _best = null; _bestT = tMax;
+  _w = w; _p = p; _x0 = x0; _y0 = y0; _dx = dx; _dy = dy; _F = F2; _pad = pad; _props = props; _best = null; _bestT = tMax; _skip = skip;
   w.query(x0 + dx / 2, y0 + dy / 2, len / 2 + SPACE.MARGIN + pad, segOne);
   const hit = _best; SWEEP.t = _bestT;
-  _w = null; _p = null; _best = null;
+  _w = null; _p = null; _best = null; _skip = null;
   return hit;
 }
 /** Height of a shot fired from up high (jetpack, UFO): p.rise at the muzzle, falling p.drop px per px flown (art: p.z). */
